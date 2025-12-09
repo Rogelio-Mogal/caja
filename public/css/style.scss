@@ -1,0 +1,490 @@
+/**
+ * Vue-IconsPicker
+ */
+
+@import '~material-scss-colors';
+@import 'material';
+@import 'vars';
+@import 'theme';
+@import 'toast';
+@import 'overflow-menu';
+
+// Chrome popup default font style
+body {
+  font-family: $roboto;
+  font-size: 75%;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 380px;
+  height: 600px;
+}
+
+body {
+  font-family: $roboto;
+  color: $color-text-dark;
+
+  cursor: default;
+  user-select: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+// Utilities
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+// Global layout
+body {
+  display: flex;
+}
+#app {
+  width: 100%;
+}
+.app {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+header.header {
+  flex-shrink: 0;
+}
+
+.content {
+  flex-grow: 1;
+
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  position: relative;
+
+  .icons {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+}
+
+header.header {
+  padding: 5px 10px;
+  color: #fff;
+  background-color: var(--background-header);
+  transition: background 0.25s ease;
+
+  h1 {
+    font-size: 22px;
+    font-weight: normal;
+    margin: 5px 0;
+    display: inline-block;
+
+    a {
+      color: #fff;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .logo-wrap {
+      display: inline-block;
+      margin: 0 10px 0 5px;
+      position: relative;
+
+      &, .logo, .logo i {
+        width: 24px;
+        height: 24px;
+      }
+
+      .logo {
+        position: absolute;
+        font-size: 24px;
+        line-height: 1em;
+
+        // transition from one library to another
+        &.v-enter-active,
+        &.v-leave-active {
+          transition-duration: 0.25s;
+          transition-property: opacity, transform;
+
+          &.v-enter-active {
+            transition-timing-function: $timing-function-in;
+          }
+          &.v-leave-active {
+            transition-timing-function: $timing-function-out;
+          }
+        }
+
+        &.v-enter-from,
+        &.v-leave-to {
+          opacity: 0;
+
+          &.v-enter-from {
+            transform: translateY(-8px);
+          }
+          &.v-leave-to {
+            transform: translateY(8px);
+          }
+        }
+      }
+    }
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+
+    // overflow menu
+    button {
+      padding: 0;
+      margin-left: auto;
+      border: 0;
+      cursor: pointer;
+      background: transparent;
+      outline: none;
+
+      &, i {
+        width: 24px;
+        height: 24px;
+      }
+
+      i {
+        display: inline-block;
+        color: #fff;
+        font-size: 24px;
+        line-height: 1em;
+      }
+    }
+  }
+
+  .search-wrap {
+    position: relative;
+    margin: 5px 0;
+
+    .search {
+      width: 100%;
+      padding: 6px 8px;
+      font-family: $roboto;
+      font-size: 15px;
+      color: #fff;
+      outline: none;
+      border: 0;
+      border-radius: 4px;
+      transition-duration: $timing-medium;
+      transition-property: background;
+      background: var(--background-search);
+
+      &:active, &:focus {
+        background: var(--background-search-focus);
+      }
+    }
+
+    ::-webkit-input-placeholder { /* WebKit, Blink, Edge */
+      color: #fff;
+      opacity: 0.8;
+    }
+    :-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+      color: #fff;
+      opacity: 0.8;
+    }
+    ::-moz-placeholder { /* Mozilla Firefox 19+ */
+      color: #fff;
+      opacity: 0.8;
+    }
+
+    .search-clear {
+      $size: 32px;
+      $padding: 8px;
+      position: absolute;
+      z-index: 1;
+      right: 0;
+      top: 0;
+      padding: $padding;
+      opacity: 0.8;
+      transition-duration: $timing-short;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 1;
+      }
+
+      &.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      &:before {
+        font-size: #{$size - $padding*2};
+      }
+    }
+  }
+
+  .overflow-menu-container {
+    margin-left: auto;
+
+    .overflow-menu {
+      .icon-click-action {
+        text-align: right;
+        width: 50%;
+        line-height: 1em;
+        font-size: 0.8em;
+      }
+    }
+  }
+}
+
+.content {
+  position: relative;
+  overflow: hidden;
+}
+
+.icons {
+  font-size: 0;
+  overflow-y: scroll;
+  text-align: center;
+  box-shadow: inset $elevation-tiny;
+  background: var(--background);
+  padding-bottom: $properties-height;
+
+  i {
+    display: inline-block;
+    margin: $icon-margin;
+    padding: $icon-padding;
+    border: $icon-border solid transparent;
+    border-radius: 4px;
+    transition-duration: $timing-short;
+    width: $icon-size + 2*($icon-padding) + 2*($icon-border);
+    height: $icon-size + 2*($icon-padding) + 2*($icon-border);
+    line-height: $icon-size;
+    color: var(--color-icon);
+    font-size: $icon-size;
+    overflow: hidden;
+
+    &:hover {
+      border-color: rgba(#000, 0.1);
+    }
+
+    &.active {
+      color: $icons-color-hover !important;
+    }
+
+    &.mdi-blank {
+      border-color: rgba(#000, 0.3);
+      border-style: dashed;
+    }
+  }
+}
+
+// Random icons colors
+.random-icon-colors {
+  @for $i from 1 through length($colors) {
+    .icons i:nth-child(#{$i}n) {
+      color: map-get(nth(map-values($colors), $i), "500");
+    }
+  }
+}
+
+.footer-enter-active {
+  transition-duration: 100ms;
+  transition-property: transform, opacity;
+  transition-timing-function: $timing-function-in;
+}
+
+.footer-leave-active {
+  transition-duration: 100ms;
+  transition-property: transform, opacity;
+  transition-timing-function: $timing-function-out;
+}
+
+.footer-enter-from, .footer-leave-to {
+  transform: scale(0.98) translateY(10px);
+  opacity: 0;
+}
+
+footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  // Width is computed from JS, since we don't know .icons scrollbar width
+  // width: calc(100% - 10px)
+  box-shadow: $elevation-1;
+  background: var(--background-footer);
+  color: var(--color-footer);
+  padding: 5px 10px;
+  border-radius: 10px 10px 0 0;
+
+  $icon-size: 56px;
+  $icon-margin-l: 5px;
+  $icon-margin-r: 20px;
+
+  .icon-properties {
+    display: flex;
+    align-items: center;
+  }
+  .icon-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+
+    .desktop-font-icon-preview {
+      display: inline-block;
+      margin: -1px 0;
+      font-size: 17px;
+      line-height: 1em;
+    }
+
+    a, button {
+      font-size: .75rem;
+      display: inline-flex;
+      flex-direction: row;
+      align-items: center;
+      font-weight: 500;
+      white-space: nowrap;
+      vertical-align: middle;
+      user-select: none;
+      border: 0;
+      line-height: 1.5;
+      border-radius: .2rem;
+      padding: .4rem .5rem;
+      color: inherit;
+      font-family: inherit;
+      text-decoration: none;
+      cursor: default;
+      transition: all 200ms ease-in-out;
+      box-shadow: var(--shadow-button);
+      background: var(--background-button);
+
+      i {
+        font-size: 16px;
+        margin-right: 4px;
+        line-height: 1em;
+        opacity: 0.9;
+      }
+
+      &:hover {
+        background: var(--background-button-hover);
+        color: var(--color-button-hover);
+        filter: brightness(1.1);
+        box-shadow: var(--shadow-button-hover);
+      }
+    }
+
+    .overflow-menu {
+      left: 50%;
+    }
+  }
+
+  .icon-icon {
+    width: $icon-size;
+    height: $icon-size;
+    flex-shrink: 0;
+    text-align: center;
+    color: $icons-color-hover;
+    line-height: $icon-size;
+    font-size: 35px;
+    margin: 5px $icon-margin-r 5px $icon-margin-l;
+    border-radius: 50%;
+    transition-duration: $timing-short;
+    cursor: pointer;
+  }
+
+  .icon-info {
+    flex-grow: 1;
+    width: calc(100% - #{$icon-size + $icon-margin-l + $icon-margin-r});
+
+    .icon-name {
+      font-size: 20px;
+      margin-top: 5px;
+    }
+
+    .icon-usage {
+      display: block;
+      font-family: monospace;
+      white-space: pre;
+      border: 0;
+      font-size: 1em;
+      width: 100%;
+      cursor: text;
+      margin: 5px 0;
+      padding: 5px 8px;
+      border-radius: 2px;
+      color: #a5c25c;
+      background: #2b2b2b;
+      overflow-x: hidden;
+      box-shadow: $elevation-negative;
+    }
+
+    .icon-name, .icon-usage {
+      user-select: text;
+    }
+
+    .icon-more {
+      margin: 0;
+      opacity: 0.5;
+      margin-bottom: 8px;
+
+      .icon-version, .icon-author {
+        user-select: text;
+      }
+    }
+  }
+}
+
+// Accent color change
+@each $color, $shades in $colors {
+  .accent-color--#{$color} {
+    .icons i.active,
+    .icon-properties .icon-icon {
+      background-color: map-get($shades, "500");
+    }
+
+    .icon-properties .icon-icon:hover {
+      background-color: darken(map-get($shades, "500"), 5);
+    }
+
+    .switch.boolean.active {
+      background-color: rgba(map-get($shades, "500"), 0.3);
+
+      .handle {
+        background-color: map-get($shades, "500");
+      }
+    }
+  }
+}
+
+.switch {
+  position: relative;
+  width: 30px;
+  height: 12px;
+  background: rgba(#000, 0.38);
+  border-radius: 7px;
+  transition: $timing-short background $transition-timing-function;
+
+  .handle {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-top: -2px;
+    background: #fff;
+    box-shadow: $elevation-1;
+    transition: $timing-short background $transition-timing-function, $timing-short transform $transition-timing-function;
+  }
+
+  &.active .handle {
+    transform: translateX(14px);
+  }
+}
