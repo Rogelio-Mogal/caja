@@ -90,7 +90,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col-lg-12 col-md-12">
-                                    <h5 class="card-title">PAGO DE PRÉSTAMOS CORRECTOS <span style="color: green;" id="importe_total"></span></h5> 
+                                    <h5 class="card-title">PAGO DE PRÉSTAMOS CORRECTOS <span style="color: green;" id="importe_total"></span></h5>
                                 </div>
                             </div>
                         </div>
@@ -189,7 +189,7 @@
                 <div class="col-lg-12 col-md-12 col-sm-12" align="center">
                     <div class="col-2 custom-center-align">
                         <br />
-                        {!! Form::button('Guardar', ['type' => 'submit', 'class' => 'btn btn-primary', 'id' => 'submitBtn', 'style' => 'display: none;']) !!}
+                        {!! Form::button('Guardar', ['type' => 'submit', 'class' => 'btn btn-primary', 'id' => 'submitBtn']) !!}
                     </div>
                 </div>
             </div>

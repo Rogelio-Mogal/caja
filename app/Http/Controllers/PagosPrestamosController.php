@@ -45,15 +45,31 @@ class PagosPrestamosController extends Controller
             // OBTENEMOS LOS DATOS PARA ABONAR EL PRESTAMO
             $datosFormulario = $request->all();
             if (isset($datosFormulario['prestamos_id']) && count($datosFormulario['prestamos_id']) > 0) {
-                
+
                 foreach ($request->prestamos_id as $key => $value) {
                     //BUSCAMOS EL REGISTRO PARA REALIZAR EL ABONO
                     $prestamoPago = PagosPrestamos::where('prestamos_id', '=', $request->prestamos_id[$key])
                     ->where('serie_pago', '=', $request->serie_pago[$key])
-                    ->get();
+                    //->get();
+                    ->first();
 
                     $idprestamoPago = 0;
+                    if ($prestamoPago) {
+
+                        $idprestamoPago = $prestamoPago->id;
+
+                        $prestamoPago->update([
+                            'pagado' => 1,
+                            'fecha_pago' => $request->fecha_pago[$key],
+                            'fecha_captura' => Carbon::now(),
+                            'wci' => auth()->user()->id,
+                        ]);
+                    }
+
+
+                    /*
                     foreach ($prestamoPago as $pago) {
+                        dd($pago);
                         $idprestamoPago = $pago->id;
                         $pago->update([
                             'pagado' => 1,
@@ -61,7 +77,7 @@ class PagosPrestamosController extends Controller
                             'fecha_captura' => Carbon::now(),
                             'wci' => auth()->user()->id,
                         ]);
-                    }
+                    }*/
 
                    /* $prestamoPago = new PagosPrestamos();
                     $prestamoPago->prestamos_id = $request->prestamos_id[$key];
@@ -80,6 +96,7 @@ class PagosPrestamosController extends Controller
                         ->where('debe', '>', 0)
                         //->whereRaw('debe > 0')
                         ->get(['prestamo_detalles.*']);
+                        //dd($avales);
                     if ($avales->count() > 0) {
                         $totalAvales = $avales->count();
                         $abonoAval = $prestamoPago->capital / $totalAvales;
@@ -210,10 +227,15 @@ class PagosPrestamosController extends Controller
                         //dd($prestamoPago->capital);
                         $abonoAvalCapital = 0;
                         $abonoAvalDescuento = 0;
-                        foreach ($prestamoPago as $pago) {
+                        /*foreach ($prestamoPago as $pago) {
                             $abonoAvalCapital = $pago->capital;
                             $abonoAvalDescuento = $pago->decuento;
-                        }
+                        }*/
+
+                        //foreach ($prestamoPago as $pago) {
+                            $abonoAvalCapital = $prestamoPago->capital;
+                            $abonoAvalDescuento = $prestamoPago->decuento;
+                        //}
 
                         // ABONO DEL CLIENTE SIN AVAL
                         //$abonoAval = $prestamoPago->capital;
@@ -222,7 +244,7 @@ class PagosPrestamosController extends Controller
 
                         // Restante disponible para abonar al aval
                         $restanteAval = $rowPrestamo->debe;
-                        
+
                         // Calcula el abono real al aval
                         $abonoReal = min($abonoAvalCapital, $restanteAval);
                         $abonoRealDescuento = min($abonoAvalDescuento, $restanteAval);
@@ -596,7 +618,7 @@ class PagosPrestamosController extends Controller
 
     public function show(PagosPrestamos $pagosPrestamos)
     {
-        
+
     }
 
     public function edit(PagosPrestamos $pagosPrestamos)
@@ -690,8 +712,8 @@ class PagosPrestamosController extends Controller
                     $pagoQuincenal  = number_format($pago_quincenal / 100, 2);
                     //if ($prestamo->nombre_completo === $nombreCompleto &&
                     if ($normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
-                        $pagoQuincenal == $importe && 
-                        $prestamo->compara_pago == 0 && 
+                        $pagoQuincenal == $importe &&
+                        $prestamo->compara_pago == 0 &&
                         ($prestamo->serie + 1) == $serie ) {
                         // Coincidencia encontrada, actualiza el campo COMPARA_PAGO a 1
                         $prestamo->update([
@@ -763,7 +785,7 @@ class PagosPrestamosController extends Controller
                     'importe' => $row->pago_quincenal,
                 ];
                 $allSerieOk[] = $serieOk;
-                
+
                 // Suma al total
                 $totalImporte += $row->pago_quincenal;
             }
@@ -776,9 +798,9 @@ class PagosPrestamosController extends Controller
 
             return response()->json(
                 [
-                    'result' => 'success', 
-                    'serie-ok' => $allSerieOk, 
-                    'serie-no-db' => $allSerieNoDb, 
+                    'result' => 'success',
+                    'serie-ok' => $allSerieOk,
+                    'serie-no-db' => $allSerieNoDb,
                     'serie-no-excel' => $allSerieNoExcel,
                     'importe_total' => $totalImporte
                 ]
@@ -789,7 +811,7 @@ class PagosPrestamosController extends Controller
         return response()->json(['error' => 'No se ha proporcionado ningún archivo.']);
     }
 
-    //INTENTO UNO 
+    //INTENTO UNO
     /* public function leerArchivoExcelPago(Request $request)
     {
         if ($request->hasFile('archivo')) {

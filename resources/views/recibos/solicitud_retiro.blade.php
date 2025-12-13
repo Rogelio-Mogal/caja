@@ -32,7 +32,7 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            font-size: 11px;
+            font-size: 10px;
             color: #0A0A0A;
         }
 
@@ -165,7 +165,7 @@
                             <img class="masthead-avatar mb-5"
                                 src="{{ asset('image/caja.png') }}" alt="SSPO_logo" width="auto" height="80px" />
                         </td>
-                        <td rowspan="3" style="width: 245;" align="center">
+                        <td rowspan="3" style="width: 120;" align="center">
                             &nbsp;
                         </td>
                         <td colspan="3" class="b-bottom"
@@ -210,13 +210,13 @@
                         </td>
                     </tr>
                     <tr>
-                        <td colspan="5" 
+                        <td colspan="5"
                         style="font-size: 1rem; padding-bottom: 3; padding-top: 3; padding-left: 10px; text-align: left; line-height: 0.7 ">
                         &nbsp;
                         </td>
                     </tr>
                     <tr>
-                        <td colspan="5" 
+                        <td colspan="5"
                         style="font-size: 1rem; padding-bottom: 3; padding-top: 3; padding-left: 10px; text-align: left; line-height: 1.2 ">
                         Por medio de la presente solicito por mi propio derecho, retirar de mi fondo de ahorro que a la fecha asciende a ${{ number_format($retiro->saldo,2) }},
                         la cantidad de $ {{ number_format($retiro->monto_retiro,2) }} por así convenir a mis intereses, reconociendo así mismo que a la quincena {{$day}}/{{$mesEnEspanol}}/{{$year}}, tengo
@@ -242,20 +242,30 @@
                         </td>
                     </tr>
                     <tr>
-                        <td colspan="2"
+                        <td colspan="1"
                         style="font-size: 1rem; padding-bottom: 3; padding-top: 3; padding-left: 10px; text-align: left; line-height: 1.5 ">
-                        TELÉFONO: 
+                        TELÉFONO:{{$retiro->telefono}}
                         </td>
-                        <td colspan="3"
+                        <td colspan="4"
                         style="font-size: 1rem; padding-bottom: 3; padding-top: 3; padding-left: 10px; text-align: left; line-height: 1.5 ">
-                        ADSCRIPCIÓN: 
+                        ADSCRIPCIÓN:{{$retiro->sector}}
                         </td>
                     </tr>
                     <tr>
                         <td colspan="5"
                         style="font-size: 1rem; padding-bottom: 3; padding-top: 3; padding-left: 10px; text-align: left; line-height: 1.5 ">
-                        EN MI CARÁCTER DE SOLICITANTE, AUTORIZO QUE EL DEPÓSITO SEA REALIZADO A LA TARJETA NO._____________________________ 
-                        DEL BANCO:______________________________
+                        EN MI CARÁCTER DE SOLICITANTE, AUTORIZO QUE EL DEPÓSITO SEA REALIZADO A LA
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="5"
+                        style="font-size: 1rem; padding-bottom: 3; padding-top: 3; padding-left: 10px; text-align: left; line-height: 3.5;">
+                        TARJETA NO._____________________________   DEL BANCO:______________________________
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="5"
+                        style="font-size: 1rem; padding-bottom: 3; padding-top: 3; padding-left: 10px; text-align: left; line-height: 3.5 ">
                         A NOMBRE DE:_____________________________________________________________________
                         </td>
                     </tr>
@@ -289,19 +299,33 @@
                     </tr>
                     <tr>
                         <td colspan="5">
-                            <p style="margin:3% 0;">&nbsp;</p>
+                            <p style="margin:0.5% 0;">&nbsp;</p>
                         </td>
                     </tr>
                     <tr>
                         <td colspan="2">
-                            <p style="text-align: center;">
+                            <p style="text-align: center; margin-bottom:0;">
+                                ______________________________________
+                            </p>
+                        </td>
+                        <td>
+                        </td>
+                        <td colspan="2">
+                            <p style="text-align: center; margin-bottom:0;">
+                                ______________________________________
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <p style="text-align: center; margin-top:0;">
                                 AUTORIZO
                             </p>
                         </td>
                         <td>
                         </td>
                         <td colspan="2">
-                            <p style="text-align: left;">
+                            <p style="text-align: center; margin-top:0;">
                                 {{$retiro->nombre_completo}}
                             </p>
                         </td>
@@ -333,7 +357,7 @@
                 </tbody>
             </table>
 
-       
+
 
         </div>
         <br />
@@ -376,7 +400,7 @@
         }
         return $numu;
     }
-    
+
     function decena($numdero)
     {
         if ($numdero >= 90 && $numdero <= 99) {
@@ -458,7 +482,7 @@
         }
         return $numd;
     }
-    
+
     function centena($numc)
     {
         if ($numc >= 100) {
@@ -512,10 +536,10 @@
         } else {
             $numce = decena($numc);
         }
-    
+
         return $numce;
     }
-    
+
     function miles($nummero)
     {
         if ($nummero >= 1000 && $nummero < 2000) {
@@ -527,10 +551,10 @@
         if ($nummero < 1000) {
             $numm = centena($nummero);
         }
-    
+
         return $numm;
     }
-    
+
     function decmiles($numdmero)
     {
         if ($numdmero == 10000) {
@@ -545,10 +569,10 @@
         if ($numdmero < 10000) {
             $numde = miles($numdmero);
         }
-    
+
         return $numde;
     }
-    
+
     function cienmiles($numcmero)
     {
         if ($numcmero == 100000) {
@@ -562,7 +586,7 @@
         }
         return $num_letracm;
     }
-    
+
     function millon($nummiero)
     {
         if ($nummiero >= 1000000 && $nummiero < 2000000) {
@@ -574,10 +598,10 @@
         if ($nummiero < 1000000) {
             $num_letramm = cienmiles($nummiero);
         }
-    
+
         return $num_letramm;
     }
-    
+
     function decmillon($numerodm)
     {
         if ($numerodm == 10000000) {
@@ -592,10 +616,10 @@
         if ($numerodm < 10000000) {
             $num_letradmm = millon($numerodm);
         }
-    
+
         return $num_letradmm;
     }
-    
+
     function cienmillon($numcmeros)
     {
         if ($numcmeros == 100000000) {
@@ -609,7 +633,7 @@
         }
         return $num_letracms;
     }
-    
+
     function milmillon($nummierod)
     {
         if ($nummierod >= 1000000000 && $nummierod < 2000000000) {
@@ -621,19 +645,19 @@
         if ($nummierod < 1000000000) {
             $num_letrammd = cienmillon($nummierod);
         }
-    
+
         return $num_letrammd;
     }
-    
+
     function convertir($numero)
     {
         $num = str_replace(',', '', $numero);
         $num = number_format($num, 2, '.', '');
         $cents = substr($num, strlen($num) - 2, strlen($num) - 1);
         $num = (int) $num;
-    
+
         $numf = milmillon($num);
-    
+
         return $numf . ' PESOS ' . $cents . '/100 MN';
     }
     ?>

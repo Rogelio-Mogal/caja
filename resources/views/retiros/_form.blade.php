@@ -160,8 +160,8 @@
             let formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
             // Mostrar correctamente si apenas están escribiendo el punto
-            input.value = decimalPart !== '' || value.endsWith('.') 
-                ? `${formattedInteger}.` + decimalPart 
+            input.value = decimalPart !== '' || value.endsWith('.')
+                ? `${formattedInteger}.` + decimalPart
                 : formattedInteger;
 
             // Actualizar el hidden limpio (sin comas)
@@ -245,10 +245,10 @@
 
                 // Recupera los datos almacenados en la selección actual
                 var selectedData = $(this).data('selectedData');
-                
+
                 if (selectedData) {
                     var saldo = selectedData.saldo || 0; // Recupera el saldo
-                    
+
                     // Formatea el saldo como moneda mexicana
                     var saldoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(saldo);
 

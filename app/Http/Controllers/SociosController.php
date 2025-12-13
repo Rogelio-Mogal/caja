@@ -45,7 +45,7 @@ class SociosController extends Controller
         $socios = new Socios;
         $categorias = SectorCategoria::where('tipo', 'CATEGORÍA')->get();
         $sectores =  SectorCategoria::where('tipo', 'SECTOR')->get();
-        $estadoCivil = ['-', 'SOLTERO (A)', 'CASADO (A)', 'DIVORCIADO (A)', 'SEPARADO (A)', 'VIUDO (A)', 'UNIÓN LIBRE', 'CONCUBINATO', 'TRÁMITE DE DIVORCIO']; 
+        $estadoCivil = ['-', 'SOLTERO (A)', 'CASADO (A)', 'DIVORCIADO (A)', 'SEPARADO (A)', 'VIUDO (A)', 'UNIÓN LIBRE', 'CONCUBINATO', 'TRÁMITE DE DIVORCIO'];
         $beneficiarios = [];
 
         return view('socios.create', compact('socios', 'categorias', 'sectores', 'beneficiarios','estadoCivil'));
@@ -276,7 +276,7 @@ class SociosController extends Controller
         $socios = Socios::findorfail($id);
         $categorias = SectorCategoria::where('tipo', 'CATEGORÍA')->get();
         $sectores =  SectorCategoria::where('tipo', 'SECTOR')->get();
-        $estadoCivil = ['-', 'SOLTERO (A)', 'CASADO (A)', 'DIVORCIADO (A)', 'SEPARADO (A)', 'VIUDO (A)', 'UNIÓN LIBRE', 'CONCUBINATO', 'TRÁMITE DE DIVORCIO']; 
+        $estadoCivil = ['-', 'SOLTERO (A)', 'CASADO (A)', 'DIVORCIADO (A)', 'SEPARADO (A)', 'VIUDO (A)', 'UNIÓN LIBRE', 'CONCUBINATO', 'TRÁMITE DE DIVORCIO'];
         $tipoValues = ['BAJA DE LA CORPORACIÓN','BAJA DE LA CAJA','FALLECIMIENTO'];
 
         return view('socios.delete', compact('socios', 'categorias', 'sectores','tipoValues','estadoCivil'));
@@ -287,7 +287,7 @@ class SociosController extends Controller
         $socios = Socios::findorfail($id);
         $categorias = SectorCategoria::where('tipo', 'CATEGORÍA')->get();
         $sectores =  SectorCategoria::where('tipo', 'SECTOR')->get();
-        $estadoCivil = ['-', 'SOLTERO (A)', 'CASADO (A)', 'DIVORCIADO (A)', 'SEPARADO (A)', 'VIUDO (A)', 'UNIÓN LIBRE', 'CONCUBINATO', 'TRÁMITE DE DIVORCIO']; 
+        $estadoCivil = ['-', 'SOLTERO (A)', 'CASADO (A)', 'DIVORCIADO (A)', 'SEPARADO (A)', 'VIUDO (A)', 'UNIÓN LIBRE', 'CONCUBINATO', 'TRÁMITE DE DIVORCIO'];
         $beneficiarios = $socios->beneficiarios()->where('activo', 1)->get(); //$socios->beneficiarios; // obtengo los beneficiarios del socio, a travez de la relacion
         $tipoValues = ['ACTIVO','DEVOLUCIONES','BAJA DE LA CORPORACIÓN','BAJA DE LA CAJA','FALLECIMIENTO','PENDIENTE','TRÁMITE'];
 
@@ -461,7 +461,7 @@ class SociosController extends Controller
             }
 
             // Guardar historial antes de cambiar
-            $fechaBaja = $request->fecha_baja 
+            $fechaBaja = $request->fecha_baja
                 ? \Carbon\Carbon::createFromFormat('d/m/Y', $request->fecha_baja)->format('Y-m-d')
                 : now()->format('Y-m-d');
             $socios->ajustes()->create([
@@ -599,7 +599,7 @@ class SociosController extends Controller
 
             // Verificar si el usuario ya tiene una imagen almacenada
             $usuario = Socios::find($usuarioId);
-            
+
             //if (!empty($usuario->photo_path)) {
             //    // Si tiene una imagen almacenada, elimina la imagen anterior
             //    File::delete(public_path('/foto_socios/' . $usuario->photo_path));
@@ -608,14 +608,14 @@ class SociosController extends Controller
             if (!empty($photoPath)) {
                 // Combinar la ruta relativa con el disco 'foto_socios' para obtener la ruta completa
                 $fullPath = Storage::disk('foto_socios')->path($photoPath);
-            
+
                 // Verificar si el archivo existe en el disco 'foto_socios'
                 if (Storage::disk('foto_socios')->exists($photoPath)) {
                     // Eliminar el archivo utilizando File::delete
                     File::delete($fullPath);
                 }
             }
-           
+
            /* if (File::exists($request->file('photo'))) {
                 $image = $request->file('photo');
                 $input['imagename'] = uniqid() . '.' . $image->extension();
@@ -629,20 +629,20 @@ class SociosController extends Controller
                 Socios::where('id', $usuarioId)->update(['photo_path' => $input['imagename']]);
 
             }*/
-            
+
             if (File::exists($request->file('photo'))) {
                 $image = $request->file('photo');
                 $input['imagename'] = uniqid() . '.' . $image->extension();
-            
+
                 $filePath = '/home/pcservi2/sspo/public_html/sspo/foto_socios/';
                 //$image->move($filePath, $input['imagename']);
                 //$nombreArchivo = uniqid() . '.' . $image->extension();
-                
+
                 $nombreArchivo = $usuario->id.'_'. Str::random(10). '.' . $image->extension();
 
-                
+
                 Storage::disk('foto_socios')->put($nombreArchivo, file_get_contents($image));
-            
+
                 // Actualizar la ruta de la imagen en la base de datos
                 Socios::where('id', $usuarioId)->update(['photo_path' => $nombreArchivo]);
             }
@@ -669,7 +669,7 @@ class SociosController extends Controller
                 //Storage::disk('foto_socios')->delete($usuario->photo_path);
                 File::delete(public_path('/foto_socios/' . $usuario->photo_path));
             }
-           
+
             //if (File::exists($request->file('photo'))) {
             //    $image = $request->file('photo');
             //    $input['imagename'] = $usuario->id.'_'. Str::random(10). '.' . $image->extension();
@@ -865,9 +865,9 @@ class SociosController extends Controller
 
         return response()->json(
             [
-                'result' => 'success', 
-                'socio' => $socio, 
-                'prestamos' => $prestamos, 
+                'result' => 'success',
+                'socio' => $socio,
+                'prestamos' => $prestamos,
                 'prestamo-detalle' => $prestamosDetalles,
                 'total_capital_pendiente' => $totalCapitalPendiente,
             ]
@@ -963,7 +963,7 @@ class SociosController extends Controller
 
         //dd($prestamos);
 
-            
+
         //  CREAMOS EL PDF  ----
         $userPrinterSize = 80;
         if ($userPrinterSize == '0'){

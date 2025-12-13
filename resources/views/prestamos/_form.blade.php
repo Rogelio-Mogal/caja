@@ -569,8 +569,8 @@
             let formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
             // Mostrar correctamente si apenas están escribiendo el punto
-            input.value = decimalPart !== '' || value.endsWith('.') 
-                ? `${formattedInteger}.` + decimalPart 
+            input.value = decimalPart !== '' || value.endsWith('.')
+                ? `${formattedInteger}.` + decimalPart
                 : formattedInteger;
 
             // Actualizar el hidden limpio (sin comas)
@@ -895,7 +895,7 @@
             }
             new mdb.Datepicker(datepickerTranslated, {
                 confirmDateOnSelect: true,
-                disablePast: true,
+                disablePast: false, // true para solo mes actual; false para meses anteriores
                 title: 'Seleccione la fecha del primer pago',
                 monthsFull: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
                     'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -1891,7 +1891,7 @@
             }
 
             // recorro la tabla para obtener el pago quincenal, es el de mayor importe
-            function pagoQuincenal() {                
+            function pagoQuincenal() {
                 // OBTENGO EL DESCUENTO MÁS REPETIDO
                 var ocurrencias = {}; // Objeto para almacenar las ocurrencias
 

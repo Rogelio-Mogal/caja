@@ -215,6 +215,17 @@
         </table>
 
         <h2>TABLA DE INTERESES</h2>
+        @php
+            function toNumber($value) {
+                if ($value === null || $value === '') return 0;
+
+                // Quita $, comas, espacios u otros símbolos
+                $clean = str_replace(['$', ',', ' '], '', $value);
+
+                // Convierte a número flotante
+                return floatval($clean);
+            }
+        @endphp
         <table id="tabla" class="table" style="font-size: 1rem; text-align: center;">
             <thead class="table-dark">
                 <tr>
@@ -226,8 +237,18 @@
                     <th class="b-bottom">Fecha de pago</th>
                 </tr>
             </thead>
+            @php
+                $totalCapital = 0;
+                $totalInteres = 0;
+                $totalDescuento = 0;
+            @endphp
             <tbody>
                 @foreach ($tblDos['tabla_interesdos'] as $item)
+                    @php
+                        $totalCapital   += toNumber($item['Capital']);
+                        $totalInteres   += toNumber($item['Interes']);
+                        $totalDescuento += toNumber($item['Descuento']);
+                    @endphp
                     <tr>
                         <td class="b-bottom b-top">{{ $item['Pago'] }}</td>
                         <td class="b-bottom b-top">${{ $item['Capital'] }}</td>
@@ -238,6 +259,16 @@
                     </tr>
                 @endforeach
             </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <th>Total</th>
+                    <th>${{ number_format($totalCapital, 2) }}</th>
+                    <th>${{ number_format($totalInteres, 2) }}</th>
+                    <th>${{ number_format($totalDescuento, 2) }}</th>
+                    <th>-</th>
+                    <th>-</th>
+                </tr>
+            </tfoot>
         </table>
     </div>
 </body>

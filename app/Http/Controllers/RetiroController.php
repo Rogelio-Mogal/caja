@@ -152,7 +152,7 @@ class RetiroController extends Controller
             ->whereRaw(' saldo - monto_prestamos > 0')
             ->orderBy('nombre_completo', 'asc')
             ->get();
- 
+
         return json_encode($socios);*/
 
         $search = $request->input('search');
@@ -172,16 +172,20 @@ class RetiroController extends Controller
 
     public function solicitudRetiro($id)
     {
-        
+
         $retiro = Retiro::select(
             'retiros.*',
             'socios.num_socio',
             'socios.nombre_completo',
+            'socios.telefono',
             'socios.domicilio',
             'socios.saldo',
-            'socios.lugar_origen'
+            'socios.lugar_origen',
+            'socios.sector_id',
+            'sectores.sector'
         )
         ->join('socios','retiros.socios_id','=','socios.id')
+        ->join('sectores','socios.sector_id','=','sectores.id')
         ->where('retiros.id','=',$id)
         ->first();
 
