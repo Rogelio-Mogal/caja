@@ -1,9 +1,9 @@
-@extends('adminlte::page')
-@section('title','Editar servicio')
+@extends('layouts.app')
 
 @section('content')
-    <form method="post" action="{{ Route('admin.servicios.update', $servicios) }}" files='true' autocomple='off' enctype='multipart/form-data'>
+@section('title','Editar prestamo')
+    <form method="post" action="{{ Route('admin.prestamos.update', $prestamo) }}" id="form_prestamos" autocomple='off'>
         @method('PATCH')
-        @include('servicios._form', ['btnEnviar' => 'Actualizar'])
+        @include('prestamos._form', ['btnEnviar' => 'Actualizar'])
     </form>
 @stop

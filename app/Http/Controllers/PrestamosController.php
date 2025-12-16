@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Exception;
 use Carbon\Carbon;
 use PDF;
+use DB;
 use Illuminate\Support\Facades\Hash;
 
 class PrestamosController extends Controller
@@ -18,7 +19,7 @@ class PrestamosController extends Controller
     public function __construct()
     {
         $this->middleware('auth:sanctum');
-        
+
         $this->middleware('permission:crear-prestamo', ['only'=>['index','create', 'store','show']]);
         $this->middleware('permission:prestamos-diarios', ['only'=>['index']]);
 
@@ -40,21 +41,23 @@ class PrestamosController extends Controller
     public function create()
     {
         $prestamo = new Prestamos;
+        $edit = false;
+        $prestamo->setRelation('detalles', collect());
 
-        return view('prestamos.create', compact('prestamo'));
+        return view('prestamos.create', compact('prestamo','edit'));
     }
 
     public function store(Request $request)
     {
         try {
             \DB::beginTransaction();
-            
+
             $socio = Socios::findorfail($request->input('socios_id'));
             $prestamo = new Prestamos();
             $fecha = $request->input('fecha_primer_pago');
             $nuevaFecha = Carbon::createFromFormat('d/m/Y', $fecha)->format('Y-m-d');
-            $saldoSocio = $request->input('apoyo_adicional') == '' ? 
-                $request->input('saldo_socio') : 
+            $saldoSocio = $request->input('apoyo_adicional') == '' ?
+                $request->input('saldo_socio') :
                 $request->input('saldo_socio') - 5000;
             //dd($saldoSocio);
 
@@ -80,7 +83,7 @@ class PrestamosController extends Controller
             $prestamo->num_nomina = $request->input('num_nomina');
             $prestamo->num_empleado = $request->input('num_empleado');
             //$prestamo->fecha_primer_corte = $request->input('fecha_primer_corte');
-            $prestamo->apoyo_adicional = $request->input('apoyo_adicional') == '' ? 
+            $prestamo->apoyo_adicional = $request->input('apoyo_adicional') == '' ?
                                         0 : $request->input('apoyo_adicional');
             $prestamo->estatus = 'PRE-AUTORIZADO';
             // Guardamos el JSON de documentación
@@ -143,7 +146,7 @@ class PrestamosController extends Controller
                     $prestamoDetalle->debe = $request->saldo_aval[$key];
                     $prestamoDetalle->num_nomina = $request->input('num_nomina');
                     $prestamoDetalle->num_empleado = $request->input('num_empleado');
-                    $prestamoDetalle->apoyo_adicional = $request->input('apoyo_adicional') == '' ? 
+                    $prestamoDetalle->apoyo_adicional = $request->input('apoyo_adicional') == '' ?
                                                         0 : $request->input('apoyo_adicional');
                     $prestamoDetalle->save();
                     $montoPrestamoAval = $prestamoDetalle->monto_aval;
@@ -154,7 +157,7 @@ class PrestamosController extends Controller
                     //        'is_aval' => $aval->is_aval + 1,
                     //    ]);
                     //}
-                    
+
                     // INSERTAMOS EN LA TABLA MOVIMIENTOS
                     $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
                     $nextId = $lastInsertedId + 1;
@@ -184,12 +187,12 @@ class PrestamosController extends Controller
             return redirect()->route('admin.prestamos.index')->with(['id' => $id]);
         } catch (Exception $e) {
             \DB::rollback();
-            dd($e);
+            //dd($e);
             $query = $e->getMessage();
             return json_encode($query);
-            return redirect()->back()
-                ->with(['error' => 'Hubo un error durante el proceso, por favor intenetelo de nuevo.'])
-                ->withInput($request->all(), $query);
+            //return redirect()->back()
+            //    ->with(['error' => 'Hubo un error durante el proceso, por favor intenetelo de nuevo.'])
+            //    ->withInput($request->all(), $query);
         }
     }
 
@@ -319,12 +322,28 @@ class PrestamosController extends Controller
 
     public function edit($id)
     {
+        $prestamo = Prestamos::with([
+            'socio',
+            'detalles',      // PrestamoDetalle
+            'detalles.socio' // Avales
+        ])->findOrFail($id);
+
+        $edit = true;
+
+        return view('prestamos.edit', [
+            'prestamo' => $prestamo,
+            'socio'    => $prestamo->socio,
+            'edit'     =>$edit
+        ]);
+
+        //return view('prestamos.edit', compact('prestamo'));
+
+
         $montoPrestamo = 4700; //floatval($request->input('monto_prestamo'));
         $mesesPrestamo = 18; //intval($request->input('total_quincenas'));
         //$response = $this->calcularTablaInteresUno($montoPrestamo, $mesesPrestamo);
 
         $response2 = $this->calcularTablaInteresDos($montoPrestamo, $mesesPrestamo);
-        dd($response2);
 
         // Decodificar la respuesta JSON a un arreglo en PHP
         // $data = json_decode($response->getContent(), true);
@@ -401,9 +420,124 @@ class PrestamosController extends Controller
         ]);*/
     }
 
-    public function update(Request $request, Prestamos $prestamos)
+    public function update(Request $request, $id)
     {
-        //
+        try {
+            \DB::beginTransaction();
+
+            $prestamo = Prestamos::with('detalles')->findOrFail($id);
+            $socio = Socios::findOrFail($prestamo->socios_id);
+
+            // 1. CANCELAR MOVIMIENTOS VIEJOS
+            //Movimiento::where('prestamos_id', $prestamo->id)
+            //->where('estatus', 'PRE-AUTORIZADO')
+            //->update([
+            //    'estatus' => 'CANCELADO',
+            //    'movimiento' => DB::raw(
+            //        "CONCAT(movimiento,' (CANCELADO POR ACTUALIZACIÓN)')"
+            //    )
+            //]);
+
+            // 2. ELIMINAR DETALLES (SE RECREAN)
+            PrestamoDetalle::where('prestamos_id', $prestamo->id)->delete();
+
+            $fecha = Carbon::createFromFormat('d/m/Y', $request->fecha_primer_pago)->format('Y-m-d');
+
+            $saldoSocio = $request->apoyo_adicional == 1
+                ? $request->saldo_socio - 5000
+                : $request->saldo_socio;
+
+            $prestamo->update([
+                'monto_prestamo'     => $request->monto_prestamo,
+                'total_intereses'    => $request->prestamo_intereses - $request->monto_prestamo,
+                'pago_quincenal'     => $request->pago_quincenal,
+                'total_quincenas'    => $request->total_quincenas,
+                'debia'              => $request->prestamo_intereses,
+                'debe'               => $request->prestamo_intereses,
+                'diferencia'         => $saldoSocio,
+                'fecha_primer_pago'  => $fecha,
+                'proximo_pago'       => $fecha,
+                'folio'              => $request->folio,
+                'num_nomina'         => $request->num_nomina,
+                'num_empleado'       => $request->num_empleado,
+                'apoyo_adicional'    => $request->apoyo_adicional ?? 0,
+                'documentacion'      => [
+                    'copia_talon'      => $request->has('copia_talon'),
+                    'copia_ine'        => $request->has('copia_ine'),
+                    'credencial_socio' => $request->has('credencial_socio'),
+                    'pagare'           => $request->has('pagare'),
+                    'solicitud'        => $request->has('solicitud'),
+                ],
+            ]);
+
+            //4. NUEVO MOVIMIENTO SOCIO
+            $lastId = Movimiento::max('id') ?? 0;
+
+            // INSERTAMOS EN LA TABLA MOVIMIENTOS
+            $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
+            $nextId = $lastInsertedId + 1;
+
+            Movimiento::create([
+                'socios_id' => $prestamo->socios_id,
+                'fecha' => now(),
+                'folio' => 'MOV-' . $nextId,
+                'saldo_anterior' => $socio->saldo,
+                'saldo_actual' => $socio->saldo - $saldoSocio,
+                'monto' => $saldoSocio,
+                'movimiento' => 'PRESTAMO PRE AUTORIZADO (ACTUALIZADO)',
+                'tipo_movimiento' => 'CARGO',
+                'metodo_pago' => 'POR DEFINIR',
+                'estatus' => 'PRE-AUTORIZADO',
+            ]);
+
+            //5. RECREAR AVALES + MOVIMIENTOS
+            if ($request->filled('idAval')) {
+                foreach ($request->idAval as $i => $avalId) {
+
+                    $aval = Socios::findOrFail($avalId);
+
+                    PrestamoDetalle::create([
+                        'prestamos_id' => $prestamo->id,
+                        'socios_id' => $avalId,
+                        'aval' => $aval->nombre_completo,
+                        'num_aval' => $aval->num_socio,
+                        'monto_socio' => $saldoSocio,
+                        'monto_aval' => $request->saldo_aval[$i],
+                        'debia' => $request->saldo_aval[$i],
+                        'debe' => $request->saldo_aval[$i],
+                        'apoyo_adicional' => $request->apoyo_adicional ?? 0,
+                    ]);
+
+                    //$lastId++;
+
+                    $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
+                    $nextId = $lastInsertedId + 1;
+
+                    Movimiento::create([
+                        'prestamos_id'   => $prestamo->id,
+                        'socios_id'      => $avalId,
+                        'fecha'          => now(),
+                        'folio'          => 'MOV-' . $nextId,
+                        'saldo_anterior' => $aval->saldo,
+                        'saldo_actual'   => $aval->saldo - $request->saldo_aval[$i],
+                        'monto'          => $request->saldo_aval[$i],
+                        'movimiento'     => 'PRESTAMO PRE AUTORIZADO AVAL (ACTUALIZADO)',
+                        'tipo_movimiento'=> 'CARGO',
+                        'metodo_pago'    => 'POR DEFINIR',
+                        'estatus'        => 'PRE-AUTORIZADO',
+                    ]);
+                }
+            }
+
+            \DB::commit();
+            //return redirect()->route('prestamos.index')->with('success', 'Préstamo actualizado correctamente');
+            return redirect()->route('admin.prestamos.index')->with(['id' => $id]);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            dd($e->getMessage());
+            return back()->withErrors($e->getMessage());
+        }
     }
 
     public function destroy(Prestamos $prestamos)
@@ -901,7 +1035,7 @@ class PrestamosController extends Controller
         if (!$user || !\Illuminate\Support\Facades\Hash::check($credentials['password'], $user->password)) {
             return response()->json(['autorizado' => false, 'mensaje' => 'Credenciales inválidas'], 401);
         }
-    
+
         // Verifica si el usuario tiene el rol ADMINISTRADOR
         if (!$user->hasRole('ADMINISTRADOR')) {
             return response()->json(['autorizado' => false, 'mensaje' => 'No tiene permisos suficientes'], 403);

@@ -379,11 +379,29 @@
 
         //VALIDA MONTO A RETIRAR
         document.getElementById('form_retiro').addEventListener('submit', function (e) {
-            const saldoStr = document.getElementById('saldo').value.replace(/[^0-9.,]/g, '').replace(/,/g, '');
+            //const saldoStr = document.getElementById('saldo').value.replace(/[^0-9.,]/g, '').replace(/,/g, '');
+            let saldoStr = document.getElementById('saldo').value
+            .replace(/,/g, '')
+            .replace(/[^0-9.-]/g, '');
             const retiroStr = document.getElementById('monto_retiro').value.replace(/,/g, '');
 
+            // Permitir solo un "-" al inicio
+            saldoStr = saldoStr.replace(/(?!^)-/g, '');
+
+            //const saldo = parseFloat(saldoStr) || 0;
             const saldo = parseFloat(saldoStr) || 0;
             const retiro = parseFloat(retiroStr) || 0;
+
+            // No permitir valores negativos
+            if (saldo < 0 || retiro < 0) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Mensaje de advertencia',
+                    html: 'No se permiten valores negativos.',
+                });
+                return false;
+            }
 
             if (retiro > saldo) {
                 e.preventDefault(); // Detiene el envío

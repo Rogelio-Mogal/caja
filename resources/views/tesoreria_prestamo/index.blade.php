@@ -61,6 +61,12 @@
                                                 </button>
                                                 <ul class="dropdown-menu">
                                                     <li>
+                                                        <a class="dropdown-item"
+                                                        href="{{ route('admin.prestamos.edit', $row->id) }}">
+                                                            Editar
+                                                        </a>
+                                                    </li>
+                                                    <li>
                                                         <button type="button" class="dropdown-item show_modal"
                                                             data-id="{{ $row->id }}">
                                                             Finalizar
