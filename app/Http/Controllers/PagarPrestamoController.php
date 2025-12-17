@@ -21,7 +21,7 @@ class PagarPrestamoController extends Controller
     public function __construct()
     {
         $this->middleware('auth:sanctum');
-        
+
         $this->middleware('permission:pagar-prestamo', ['only'=>['index','create', 'store','show']]);
     }
 
@@ -58,8 +58,8 @@ class PagarPrestamoController extends Controller
                     ->whereColumn('pp1.prestamos_id', 'prestamos.id')
                     ->where('pp1.pagado', '!=', 1)
                     ->whereRaw('pp1.serie_pago = (
-                        SELECT MAX(pp2.serie_pago) 
-                        FROM pagos_prestamos as pp2 
+                        SELECT MAX(pp2.serie_pago)
+                        FROM pagos_prestamos as pp2
                         WHERE pp2.prestamos_id = pp1.prestamos_id
                     )');
             })
@@ -187,7 +187,7 @@ class PagarPrestamoController extends Controller
                                 'monto_pago_reestructuracion' => $abonoReal
                             ]);
 
-                            
+
                         }
 
                         // Lo que sobra para el socio principal
@@ -202,7 +202,7 @@ class PagarPrestamoController extends Controller
                                 'monto_pago_reestructuracion' => $pagoCapital,
                             ]);
 
-                            
+
 
                             PagosPrestamosDetalles::create([
                                 'pagos_prestamos_id' => $idprestamoPago,
@@ -243,7 +243,7 @@ class PagarPrestamoController extends Controller
                             'monto_pago_reestructuracion' => $pagoCapital,
                         ]);
 
-                        
+
 
                         PagosPrestamosDetalles::create([
                             'pagos_prestamos_id' => $idprestamoPago,
@@ -310,7 +310,7 @@ class PagarPrestamoController extends Controller
                         'fecha_ultimo_descuento' => $request->fecha_ultimo_descuento
                     ]);
                 }
-                
+
             }
 
             /*
@@ -348,11 +348,11 @@ class PagarPrestamoController extends Controller
                         ->where('debe', '>', 0)
                         //->whereRaw('debe > 0')
                         ->get(['prestamo_detalles.*']);
-                        
+
                     if ($avales->count() > 0) {
                         $totalAvales = $avales->count();
                         $abonoAval = $pagoCapital / $totalAvales;
-                        
+
                         $sumaAbonosAval = 0;
                         foreach ($avales as $row) {
                             //ABONAMOS AL AVAL
@@ -363,7 +363,7 @@ class PagarPrestamoController extends Controller
 
                             // Calcula el abono real al aval
                             $abonoReal = min($abonoAval, $restanteAval);
-                            
+
 
                             // Acumula la suma de abonos a los avales
                             $sumaAbonosAval += $abonoReal;
@@ -433,7 +433,7 @@ class PagarPrestamoController extends Controller
                         // ABONO DEL CLIENTE CON AVAL PERO CON EL RESTO DEL ABONO
                         // Calcula el capital restante después de los abonos a los avales
                         $capitalRestante = $pagoCapital - $sumaAbonosAval;
-                        
+
                         if ($capitalRestante > 0) {
                             $rowPrestamo = Prestamos::findorfail($request->prestamos_id[$key]);
                             $interes = $rowPrestamo->total_intereses / $rowPrestamo->total_quincenas;
@@ -484,7 +484,7 @@ class PagarPrestamoController extends Controller
                                     'metodo_pago' => 'EFECTIVO',
                                     'estatus' => 'EFECTUADO',
                                 ]);
-                                
+
                                 //$socio->monto_prestamos = $socio->monto_prestamos - $capitalRestante;
                                 $socio->monto_prestamos = $socio->monto_prestamos - ($capitalRestante + $interes );
                                 $socio->save();
@@ -520,7 +520,7 @@ class PagarPrestamoController extends Controller
                             }
                         }
 
-                        //$abonoReal = $abonoReal - $interes; 
+                        //$abonoReal = $abonoReal - $interes;
                         // CREAMOS EL DETALLE DEL PRESTAMO-ABONO
                         if ($abonoReal > 0) {
                             PagosPrestamosDetalles::create([
@@ -691,11 +691,11 @@ class PagarPrestamoController extends Controller
                         ->where('debe', '>', 0)
                         //->whereRaw('debe > 0')
                         ->get(['prestamo_detalles.*']);
-                        
+
                     if ($avales->count() > 0) {
                         $totalAvales = $avales->count();
                         $abonoAval = $pagoCapital / $totalAvales;
-                        
+
                         $sumaAbonosAval = 0;
                         foreach ($avales as $row) {
                             //ABONAMOS AL AVAL
@@ -706,7 +706,7 @@ class PagarPrestamoController extends Controller
 
                             // Calcula el abono real al aval
                             $abonoReal = min($abonoAval, $restanteAval);
-                            
+
 
                             // Acumula la suma de abonos a los avales
                             $sumaAbonosAval += $abonoReal;
@@ -776,7 +776,7 @@ class PagarPrestamoController extends Controller
                         // ABONO DEL CLIENTE CON AVAL PERO CON EL RESTO DEL ABONO
                         // Calcula el capital restante después de los abonos a los avales
                         $capitalRestante = $pagoCapital - $sumaAbonosAval;
-                        
+
                         if ($capitalRestante > 0) {
                             $rowPrestamo = Prestamos::findorfail($request->prestamos_id[$key]);
                             $interes = $rowPrestamo->total_intereses / $rowPrestamo->total_quincenas;
@@ -828,7 +828,7 @@ class PagarPrestamoController extends Controller
                                     'metodo_pago' => 'EFECTIVO',
                                     'estatus' => 'EFECTUADO',
                                 ]);
-                                
+
                                 //$socio->monto_prestamos = $socio->monto_prestamos - $capitalRestante;
                                 $socio->monto_prestamos = $socio->monto_prestamos - ($capitalRestante + $interes );
                                 //dd($capitalRestante, $interes);
@@ -865,7 +865,7 @@ class PagarPrestamoController extends Controller
                             }
                         }
 
-                        //$abonoReal = $abonoReal - $interes; 
+                        //$abonoReal = $abonoReal - $interes;
                         // CREAMOS EL DETALLE DEL PRESTAMO-ABONO
                         if ($abonoReal > 0) {
                             PagosPrestamosDetalles::create([
@@ -1140,7 +1140,7 @@ class PagarPrestamoController extends Controller
                             }
                         }
 
-                        //$abonoReal = $abonoReal - $interes; 
+                        //$abonoReal = $abonoReal - $interes;
                         // CREAMOS EL DETALLE DEL PRESTAMO-ABONO
                         if ($abonoReal > 0) {
                             PagosPrestamosDetalles::create([
@@ -1296,9 +1296,9 @@ class PagarPrestamoController extends Controller
             }
         }
         */
-        
 
-        
+
+
         $prestamo = Prestamos::where('prestamos.socios_id', $id)
             ->where('prestamos.estatus', 'AUTORIZADO')
             ->where('prestamos.prestamo_especial', 0)
@@ -1308,8 +1308,8 @@ class PagarPrestamoController extends Controller
                     ->from('pagos_prestamos as pp1')
                     ->whereColumn('pp1.prestamos_id', 'prestamos.id')
                     ->where('pp1.pagado', 0)
-                    ->whereRaw('pp1.serie_pago = (SELECT MAX(pp2.serie_pago) 
-                                                    FROM pagos_prestamos as pp2 
+                    ->whereRaw('pp1.serie_pago = (SELECT MAX(pp2.serie_pago)
+                                                    FROM pagos_prestamos as pp2
                                                     WHERE pp2.prestamos_id = pp1.prestamos_id)');
             })
             ->leftJoin('pagos_prestamos', function ($join) {
@@ -1348,16 +1348,16 @@ class PagarPrestamoController extends Controller
                 $p->numero_prestamo = "Préstamo " . ($contador - 1);
             }
         }
-        
 
-        
+
+
 
         $socio = Socios::findorfail($prestamo[0]->socios_id);
 
         $tipoValues = ['PAGO EFECTIVO DE DEUDAS', 'TRASLADO DE AHORRO'];
 
         return view('pagar_prestamos.show', compact('prestamo', 'socio','tipoValues'));
-       
+
     }
 
     public function edit(Prestamos $prestamos)
@@ -1414,17 +1414,17 @@ class PagarPrestamoController extends Controller
             socios.nombre_completo,
             MAX(pagos_prestamos.fecha_tabla) as ultima_fecha_tabla,
             -- Suma de capital donde forma_pago está vacío
-            COALESCE(SUM(CASE 
-                WHEN (pagos_prestamos.forma_pago IS NULL OR pagos_prestamos.forma_pago = "") 
-                THEN pagos_prestamos.capital 
-                ELSE 0 
+            COALESCE(SUM(CASE
+                WHEN (pagos_prestamos.forma_pago IS NULL OR pagos_prestamos.forma_pago = "")
+                THEN pagos_prestamos.capital
+                ELSE 0
             END), 0) as capital_sin_forma_pago,
 
             -- Suma de capital donde forma_pago tiene algún valor
-            COALESCE(SUM(CASE 
-                WHEN (pagos_prestamos.forma_pago IS NOT NULL AND pagos_prestamos.forma_pago != "") 
-                THEN pagos_prestamos.capital 
-                ELSE 0 
+            COALESCE(SUM(CASE
+                WHEN (pagos_prestamos.forma_pago IS NOT NULL AND pagos_prestamos.forma_pago != "")
+                THEN pagos_prestamos.capital
+                ELSE 0
             END), 0) as capital_con_forma_pago,
             MAX(pagos_prestamos.referencia) as referencia
         ')

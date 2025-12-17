@@ -210,11 +210,11 @@
                         @endphp
                         <tr>
                             <td style="font-size: 0.8rem; padding-top: 4; padding-left: 10px">
-                                PRESTAMO {{ $loop->iteration }} (FECHA LIQUIDACIÓ: {{ $row->fecha_ultimo_descuento }})
+                                PRESTAMO {{ $loop->iteration }} (FECHA PAGO: {{ $row->fecha_ultimo_descuento }})
                             </td>
-                            <td style="font-size: 1rem; padding-top: 4; text-align: center;">$ {{ number_format( $row->capital_sin_forma_pago,2) }}</td>
+                            <td style="font-size: 1rem; padding-top: 4; text-align: center;">$ {{ number_format( $row->monto_prestamo - $row->capital_sin_forma_pago,2) }}</td>
                             <td style="font-size: 1rem; padding-top: 4; text-align: center;">$ {{ number_format( $row->capital_con_forma_pago,2) }}</td>
-                            <td style="font-size: 1rem; padding-top: 4; text-align: center;">$ 0.00</td>
+                            <td style="font-size: 1rem; padding-top: 4; text-align: center;">$ {{ number_format( ($row->monto_prestamo - $row->capital_sin_forma_pago) - $row->capital_con_forma_pago ,2) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -270,7 +270,7 @@
         }
         return $numu;
     }
-    
+
     function decena($numdero)
     {
         if ($numdero >= 90 && $numdero <= 99) {
@@ -352,7 +352,7 @@
         }
         return $numd;
     }
-    
+
     function centena($numc)
     {
         if ($numc >= 100) {
@@ -406,10 +406,10 @@
         } else {
             $numce = decena($numc);
         }
-    
+
         return $numce;
     }
-    
+
     function miles($nummero)
     {
         if ($nummero >= 1000 && $nummero < 2000) {
@@ -421,10 +421,10 @@
         if ($nummero < 1000) {
             $numm = centena($nummero);
         }
-    
+
         return $numm;
     }
-    
+
     function decmiles($numdmero)
     {
         if ($numdmero == 10000) {
@@ -439,10 +439,10 @@
         if ($numdmero < 10000) {
             $numde = miles($numdmero);
         }
-    
+
         return $numde;
     }
-    
+
     function cienmiles($numcmero)
     {
         if ($numcmero == 100000) {
@@ -456,7 +456,7 @@
         }
         return $num_letracm;
     }
-    
+
     function millon($nummiero)
     {
         if ($nummiero >= 1000000 && $nummiero < 2000000) {
@@ -468,10 +468,10 @@
         if ($nummiero < 1000000) {
             $num_letramm = cienmiles($nummiero);
         }
-    
+
         return $num_letramm;
     }
-    
+
     function decmillon($numerodm)
     {
         if ($numerodm == 10000000) {
@@ -486,10 +486,10 @@
         if ($numerodm < 10000000) {
             $num_letradmm = millon($numerodm);
         }
-    
+
         return $num_letradmm;
     }
-    
+
     function cienmillon($numcmeros)
     {
         if ($numcmeros == 100000000) {
@@ -503,7 +503,7 @@
         }
         return $num_letracms;
     }
-    
+
     function milmillon($nummierod)
     {
         if ($nummierod >= 1000000000 && $nummierod < 2000000000) {
@@ -515,19 +515,19 @@
         if ($nummierod < 1000000000) {
             $num_letrammd = cienmillon($nummierod);
         }
-    
+
         return $num_letrammd;
     }
-    
+
     function convertir($numero)
     {
         $num = str_replace(',', '', $numero);
         $num = number_format($num, 2, '.', '');
         $cents = substr($num, strlen($num) - 2, strlen($num) - 1);
         $num = (int) $num;
-    
+
         $numf = milmillon($num);
-    
+
         return $numf . ' PESOS ' . $cents . '/100 MN';
     }
     ?>
