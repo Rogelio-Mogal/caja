@@ -837,6 +837,7 @@ class SociosController extends Controller
     {
         // Obtener todos los préstamos de un socio
         $socio = Socios::findorfail($id);
+        
 
         /*$prestamos = $socio->prestamos()
         ->where('debe', '>', 0)
@@ -862,6 +863,8 @@ class SociosController extends Controller
         ->sum('debe');
 
         $totalCapitalPendiente = $prestamos->sum('capital_pendiente');
+
+        //dd($prestamos, $prestamosDetalles, $totalCapitalPendiente);
 
         return response()->json(
             [

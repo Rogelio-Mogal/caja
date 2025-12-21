@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="{{ asset('css/fontawesome.min.css') }}">
 
     <link rel="stylesheet" href="{{ asset('datatable/css/datatables.min.css') }}">
+    <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.4.1/css/rowGroup.dataTables.min.css">
 
     {{-- SELECT2 --}}
     <link rel="stylesheet" href="{{ asset('select2/select2.min.css') }}"  />

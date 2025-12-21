@@ -86,13 +86,80 @@ class PagarPrestamoController extends Controller
 
     public function store(Request $request)
     {
+        //dd($request);
         try {
+
+            $pagosIds = $request->prestamos_id ?? [];
+
+            //  Validar que haya al menos un pago seleccionado
+            if (empty($pagosIds)) {
+                return redirect()->back()
+                ->with('error', 'Debe seleccionar al menos un pago.')
+                ->withInput();
+            }
+
+            // VALIDACIÓN DE SERIES CONSECUTIVAS
+            /*$series = PagosPrestamos::whereIn('id', $pagosIds)
+                ->orderBy('serie_pago')
+                ->pluck('serie_pago')
+                ->values(); // importante para índices correctos
+
+            for ($i = 1; $i < $series->count(); $i++) {
+                if ($series[$i] !== $series[$i - 1] + 1) {
+                    dd('sjksnf');
+                    return redirect()->back()
+                    ->with('error', 'Las series seleccionadas no son consecutivas.')
+                    ->withInput();
+                }
+            }
+            */
+
+            // VALIDACIÓN DE SERIES CONSECUTIVAS + SERIE INICIAL CORRECTA
+            $pagos = PagosPrestamos::whereIn('id', $pagosIds)
+                ->orderBy('prestamos_id')
+                ->orderBy('serie_pago')
+                ->get()
+                ->groupBy('prestamos_id');
+
+            foreach ($pagos as $prestamoId => $pagosPrestamo) {
+
+                $series = $pagosPrestamo->pluck('serie_pago')->values();
+
+                // 🔹 1) Validar que inicie en la serie correcta
+                $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $prestamoId)
+                    ->where('pagado', 1)
+                    ->max('serie_pago') ?? 0;
+
+                if ($series->first() !== $ultimaSeriePagada + 1) {
+                    return redirect()->back()
+                        ->with(
+                            'error',
+                            "El préstamo {$prestamoId} debe iniciar desde la serie " . ($ultimaSeriePagada + 1)
+                        )
+                        ->withInput();
+                }
+
+                // 🔹 2) Validar que las series sean consecutivas
+                for ($i = 1; $i < $series->count(); $i++) {
+                    if ($series[$i] !== $series[$i - 1] + 1) {
+                        return redirect()->back()
+                            ->with(
+                                'error',
+                                "Las series del préstamo {$prestamoId} no son consecutivas."
+                            )
+                            ->withInput();
+                    }
+                }
+            }
+
+            // ✅ Si pasa la validación, ahora sí inicia la transacción
             \DB::beginTransaction();
+
             $socioID = $request->socios_id;
             $datosFormulario = $request->all();
             $prestamosIds = [];
-
-            $pagosIds = $request->prestamos_id ?? [];
+            $formaPago = $request->forma_pago;
+            $afectaSaldoSocio = $formaPago !== 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN';
 
             if (!empty($pagosIds)) {
                 foreach ($pagosIds as $pagoId) {
@@ -186,8 +253,6 @@ class PagarPrestamoController extends Controller
                                 'fecha_pago_reestructuracion' => now(),
                                 'monto_pago_reestructuracion' => $abonoReal
                             ]);
-
-
                         }
 
                         // Lo que sobra para el socio principal
@@ -201,8 +266,6 @@ class PagarPrestamoController extends Controller
                                 'fecha_pago_reestructuracion' => now(),
                                 'monto_pago_reestructuracion' => $pagoCapital,
                             ]);
-
-
 
                             PagosPrestamosDetalles::create([
                                 'pagos_prestamos_id' => $idprestamoPago,
@@ -230,7 +293,7 @@ class PagarPrestamoController extends Controller
                             ]);
 
                             $socio->decrement('monto_prestamos', $capitalRestante + $interes);
-                            $socio->decrement('saldo', $capitalRestante + $interes);
+                            //$socio->decrement('saldo', $capitalRestante + $interes);
                         }
                     } else {
                         // ----------- Sin avales -----------
@@ -242,8 +305,6 @@ class PagarPrestamoController extends Controller
                             'fecha_pago_reestructuracion' => now(),
                             'monto_pago_reestructuracion' => $pagoCapital,
                         ]);
-
-
 
                         PagosPrestamosDetalles::create([
                             'pagos_prestamos_id' => $idprestamoPago,
@@ -269,13 +330,18 @@ class PagarPrestamoController extends Controller
                             'estatus'         => 'EFECTUADO',
                         ]);
                         $socio->decrement('monto_prestamos', $abonoReal);
-                        $socio->decrement('saldo', $abonoReal);
+
+                        //VALIDA SI ES POR PAGO CON SALDO DEL SOCIO 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN', 
+                        if ($afectaSaldoSocio) {
+                            $socio->decrement('saldo', $abonoReal);
+                        }
                     }
                 }
 
                 // Eliminar IDs duplicados
                 $prestamosIds = array_unique($prestamosIds);
 
+                /*
                 // Verificar fin de préstamo **una sola vez por préstamo**
                 foreach ($prestamosIds as $id) {
                     $this->verificarFinPrestamo($id);
@@ -284,9 +350,38 @@ class PagarPrestamoController extends Controller
                 // Actualizar serie de los préstamos
                 foreach ($prestamosIds as $id) {
                     $prestamoSerie = Prestamos::findOrFail($id);
-                    $prestamoSerie->update([
-                        'serie' => $prestamoSerie->total_quincenas
-                    ]);
+                    //$prestamoSerie->update([
+                    //    'serie' => $prestamoSerie->total_quincenas
+                    //]);
+                    $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $id)
+                        ->where('pagado', 1)
+                        ->max('serie_pago');
+
+                    if (!is_null($ultimaSeriePagada)) {
+                        Prestamos::where('id', $id)->update([
+                            'serie' => $ultimaSeriePagada
+                        ]);
+                    }
+                }
+                */
+
+                foreach ($prestamosIds as $id) {
+
+                    $liquidado = $this->verificarFinPrestamo($id);
+
+                    // 🟡 Solo si NO se liquidó, actualizar serie real
+                    if (!$liquidado) {
+
+                        $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $id)
+                            ->where('pagado', 1)
+                            ->max('serie_pago');
+
+                        if (!is_null($ultimaSeriePagada)) {
+                            Prestamos::where('id', $id)->update([
+                                'serie' => $ultimaSeriePagada
+                            ]);
+                        }
+                    }
                 }
 
                 // Actualizar próxima fecha de pago
@@ -310,7 +405,6 @@ class PagarPrestamoController extends Controller
                         'fecha_ultimo_descuento' => $request->fecha_ultimo_descuento
                     ]);
                 }
-
             }
 
             /*
@@ -607,6 +701,7 @@ class PagarPrestamoController extends Controller
             \DB::rollback();
             dd($e);
             $query = $e->getMessage();
+            dd($query);
             return json_encode($query);
             return redirect()->back()
                 ->with(['error' => 'Hubo un error durante el proceso, por favor intenetelo de nuevo.'])
@@ -614,7 +709,44 @@ class PagarPrestamoController extends Controller
         }
     }
 
-    private function verificarFinPrestamo($prestamoId)
+    private function verificarFinPrestamo($prestamoId): bool
+    {
+        $prestamo = Prestamos::find($prestamoId);
+
+        if (!$prestamo) {
+            return false;
+        }
+
+        // 🔍 ¿Existen pagos pendientes?
+        $tienePagosPendientes = PagosPrestamos::where('prestamos_id', $prestamoId)
+            ->where('pagado', 0)
+            ->exists();
+
+        if ($tienePagosPendientes) {
+            return false; // ❌ aún no termina
+        }
+
+        // 🔒 CIERRE CONTABLE
+        $prestamo->update([
+            'abona' => $prestamo->debia,
+            'debe'  => 0,
+            'serie' => $prestamo->total_quincenas,
+        ]);
+
+        // 🔄 Ajuste de contadores del socio
+        if ($prestamo->is_aval == 1) {
+            Socios::where('id', $prestamo->socios_id)
+                ->decrement('is_aval');
+        } else {
+            Socios::where('id', $prestamo->socios_id)
+                ->decrement('numero_prestamos');
+        }
+
+        return true; // ✅ préstamo liquidado
+    }
+
+
+    private function verificarFinPrestamoNO($prestamoId)
     {
         $ultimoPago = PagosPrestamos::where('prestamos_id', $prestamoId)
             ->orderByDesc('fecha_pago')
@@ -1349,12 +1481,9 @@ class PagarPrestamoController extends Controller
             }
         }
 
-
-
-
         $socio = Socios::findorfail($prestamo[0]->socios_id);
 
-        $tipoValues = ['PAGO EFECTIVO DE DEUDAS', 'TRASLADO DE AHORRO'];
+        $tipoValues = ['LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN', 'LIQUIDACIÓN DE PRÉSTAMO - TRASLADO DE AHORRO'];
 
         return view('pagar_prestamos.show', compact('prestamo', 'socio','tipoValues'));
 

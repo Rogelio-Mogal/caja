@@ -15,6 +15,7 @@
 <script src="{{ asset('js/lazysizes.min.js') }}" defer></script>
 
 <script src="{{ asset('datatable/js/datatables.min.js') }}"></script>
+<script src="https://cdn.datatables.net/rowgroup/1.4.1/js/dataTables.rowGroup.min.js"></script>
 
 
 {{--<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>--}}

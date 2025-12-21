@@ -151,34 +151,6 @@
                 </div>
                 <br/>
                 <div class="row">
-                    <div class="col-lg-3 col-md-3 col-sm-6">
-                        <div class="col mb-3">
-                            <div class="form-outline">
-                                
-                                {{ Form::hidden('h_metodo_pago') }}
-
-                                {!! Form::select(
-                                    'metodo_pago',
-                                    [
-                                        '-1' => '- MÉTODO DE PAGO -',
-                                        'EFECTIVO' => 'EFECTIVO',
-                                        'TRANSFERENCIA ELECTRÓNICA' => 'TRANSFERENCIA ELECTRÓNICA',
-                                        'DEPÓSITO' => 'DEPÓSITO',
-                                        'CHEQUE' => 'CHEQUE',
-                                        'TRASLADO DE AHORRO' => 'TRASLADO DE AHORRO',
-                                    ],
-                                    old('metodo_pago', null),
-                                    ['id' => 'metodo_pago', 'class' => 'select', 'required' => 'true','tabindex' => '3'],
-                                ) !!}
-                                <label class="form-label select-label" for="metodo_pago">MÉTODO DE PAGO</label>
-                                <div class="form-helper" id="sangre_feedback" style="color: red; display: none;">Este
-                                    campo es requerido.</div>
-                            </div>
-                            @error('metodo_pago')
-                                <p class="error-message text-danger">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
 
                     <div class="col-lg-3 col-md-3 col-sm-6">
                         <div class="col mb-3">
@@ -210,6 +182,37 @@
                     <div class="col-lg-3 col-md-3 col-sm-6">
                         <div class="col mb-3">
                             <div class="form-outline">
+                                
+                                {{ Form::hidden('h_metodo_pago') }}
+
+                                {!! Form::select(
+                                    'metodo_pago',
+                                    [
+                                        '-1' => '- MÉTODO DE PAGO -',
+                                        'EFECTIVO' => 'EFECTIVO',
+                                        'TRANSFERENCIA ELECTRÓNICA' => 'TRANSFERENCIA ELECTRÓNICA',
+                                        'DEPÓSITO' => 'DEPÓSITO',
+                                        'CHEQUE' => 'CHEQUE',
+                                        'TRASLADO DE AHORRO' => 'TRASLADO DE AHORRO',
+                                    ],
+                                    old('metodo_pago', null),
+                                    ['id' => 'metodo_pago', 'class' => 'select', 'required' => 'true','tabindex' => '3'],
+                                ) !!}
+                                <label class="form-label select-label" for="metodo_pago">MÉTODO DE PAGO</label>
+                                <div class="form-helper" id="sangre_feedback" style="color: red; display: none;">Este
+                                    campo es requerido.</div>
+                            </div>
+                            @error('metodo_pago')
+                                <p class="error-message text-danger">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    
+
+                    <div class="col-lg-2 col-md-2 col-sm-6">
+                        <div class="col mb-3">
+                            <div class="form-outline">
                                 <input type="date" name="fecha_ultimo_descuento" id="fecha_ultimo_descuento" class="form-control"
                                     value="{{ request('fecha_ultimo_descuento', \Carbon\Carbon::now('America/Mexico_City')->toDateString()) }}">
                                 <label class="form-label select-label" for="fecha_ultimo_descuento">ÚLTIMO DESCUENTO</label>
@@ -222,7 +225,7 @@
                         </div>
                     </div>
 
-                    <div class="col-lg-3 col-md-3 col-sm-6">
+                    <div class="col-lg-4 col-md-4 col-sm-6">
                         <div class="col mb-3">
                             <div class="form-outline">
                                 {{ Form::text('referencia', old('referencia', $socio->referencia), ['id' => 'referencia', 'class' => 'form-control uppercase', 'placeholder' => 'Referencia', 'tabindex' => '2']) }}
@@ -249,15 +252,17 @@
                         @csrf
                         <input id="socios_id" name="socios_id" type="hidden" value="{{ $socio->id }}" />
 
-                        <table class="table">
+                        <table id="tabla-prestamos" class="table">
                             <thead>
                                 <tr>
+                                    <!--
                                     <th scope="col">
                                         Selección
                                          <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="select-all">
                                         </div>
-                                    </th>
+                                    </th>-->
+                                    <th scope="col">Selección</th>
                                     <th scope="col">Préstamo</th>
                                     <th scope="col">Serie</th>
                                     <th scope="col">Capital</th>
@@ -270,9 +275,27 @@
                                     <tr>
                                         <th scope="row">
                                             <div class="form-check">
-                                                <input class="form-check-input prestamo-check" type="checkbox"
+                                                {{-- <input class="form-check-input prestamo-check" type="checkbox"
                                                     name="prestamos_id[]" value="{{ $row->pago_id }}"
                                                     data-debe="{{ $row->capital }}">
+
+                                                <input class="form-check-input prestamo-check"
+                                                    type="checkbox"
+                                                    name="prestamos_id[]"
+                                                    value="{{ $row->pago_id }}"
+                                                    data-debe="{{ $row->capital }}"
+                                                    data-group="{{ str_replace(' ', '_', $row->numero_prestamo) }}">--}}
+
+                                                <input class="form-check-input prestamo-check"
+                                                    type="checkbox"
+                                                    name="prestamos_id[]"
+                                                    value="{{ $row->pago_id }}"
+                                                    data-debe="{{ $row->capital }}"
+                                                    data-group="{{ str_replace(' ', '_', $row->numero_prestamo) }}"
+                                                    data-serie="{{ $row->serie_pago }}">
+
+
+
                                             </div>
                                         </th>
                                         <td>{{$row->numero_prestamo}}</td>
@@ -337,13 +360,99 @@
         });
         */
 
+        function actualizarTotal() {
+            let total = 0;
+
+            document.querySelectorAll('.prestamo-check').forEach(checkbox => {
+                if (checkbox.checked) {
+                    total += parseFloat(checkbox.dataset.debe);
+                }
+            });
+
+            document.getElementById('monto_a_saldar').textContent =
+                new Intl.NumberFormat('es-MX', {
+                    style: 'currency',
+                    currency: 'MXN'
+                }).format(total);
+
+            document.getElementById('monto_saldar').value = total.toFixed(2);
+        }
+
+        function obtenerSerieMinima(group) {
+            let min = null;
+
+            document
+                .querySelectorAll(`.prestamo-check[data-group="${group}"]`)
+                .forEach(cb => {
+                    let serie = parseInt(cb.dataset.serie);
+                    if (min === null || serie < min) {
+                        min = serie;
+                    }
+                });
+
+            return min;
+        }
+
+
+        function esSeleccionValida(group) {
+            let series = [];
+
+            document
+                .querySelectorAll(`.prestamo-check[data-group="${group}"]:checked`)
+                .forEach(cb => {
+                    series.push(parseInt(cb.dataset.serie));
+                });
+
+            if (series.length === 0) return true;
+
+            series.sort((a, b) => a - b);
+
+            let serieMinima = obtenerSerieMinima(group);
+
+            // ❌ Debe iniciar desde la primera serie pendiente
+            if (series[0] !== serieMinima) {
+                return false;
+            }
+
+            // ❌ Deben ser consecutivas
+            for (let i = 1; i < series.length; i++) {
+                if (series[i] !== series[i - 1] + 1) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function haySeleccionInvalida() {
+            let invalido = false;
+
+            $('.prestamo-check:checked').each(function () {
+                let group = $(this).data('group');
+
+                if (!esSeleccionValida(group)) {
+                    invalido = true;
+                    return false; // rompe el each
+                }
+            });
+
+            return invalido;
+        }
+
+
         document.addEventListener('DOMContentLoaded', function () {
+            actualizarTotal();
+        });
+        
+
+        /*document.addEventListener('DOMContentLoaded', function () {
             const checkboxes = document.querySelectorAll('.prestamo-check');
             const selectAll = document.getElementById('select-all');
             const totalDisplay = document.getElementById('monto_a_saldar');
             const inputMontoSaldar = document.getElementById('monto_saldar');
+            */
 
-            function actualizarTotal() {
+            /*function actualizarTotal() {
                 let total = 0;
                 checkboxes.forEach(checkbox => {
                     if (checkbox.checked) {
@@ -357,8 +466,9 @@
                 }).format(total);
 
                 inputMontoSaldar.value = total.toFixed(2);
-            }
+            }*/
 
+            /*
             // Evento para seleccionar todos
             selectAll.addEventListener('change', function () {
                 checkboxes.forEach(checkbox => {
@@ -379,14 +489,81 @@
                     }
                 });
             });
+            */
 
             // Calcular total inicial
-            actualizarTotal();
-        });
+        //    actualizarTotal();
+        //});
 
 
 
         $(document).ready(function() {
+
+            // INICIOS DE DATATABLES
+            let table = $('#tabla-prestamos').DataTable({
+                paging: false,
+                ordering: false,
+                info: false,
+                searching: false,
+
+                rowGroup: {
+                    dataSrc: 1, // columna "Préstamo"
+                    startRender: function (rows, group) {
+
+                        let groupId = group.replace(/\s+/g, '_');
+
+                        return $('<tr/>')
+                            .append(`
+                                <td colspan="6">
+                                    <div class="form-check">
+                                        <input type="checkbox"
+                                            class="form-check-input select-group"
+                                            data-group="${groupId}">
+                                        <strong>${group}</strong>
+                                    </div>
+                                </td>
+                            `);
+                    }
+                },
+
+                columnDefs: [
+                    { targets: 1, visible: false }
+                ]
+            });
+
+            // Seleccionar / deseleccionar por grupo
+            $(document).on('change', '.select-group', function () {
+                let group = $(this).data('group');
+                let checked = this.checked;
+
+                $('.prestamo-check').each(function () {
+                    if ($(this).data('group') === group) {
+                        this.checked = checked;
+                    }
+                });
+
+                actualizarTotal();
+            });
+
+            $(document).on('change', '.prestamo-check', function () {
+                let group = $(this).data('group');
+
+                if (!esSeleccionValida(group)) {
+                    this.checked = false;
+
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selección inválida',
+                        text: 'Debe seleccionar los pagos desde la primera serie pendiente y en orden consecutivo.'
+                    });
+
+                    return;
+                }
+
+                actualizarTotal();
+            });
+
+
             let totalcapint = 0;
             let totalinteres = 0;
             let interesid = 0;
@@ -402,11 +579,25 @@
 
             // VALIDAR ANTES DE ENVIAR EL FORMULARIO
             $('#form_pagar_prestamos').on('submit', function(e) {
+                // VALIDACIÓN: series consecutivas
+                if (haySeleccionInvalida()) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selección inválida',
+                        text: 'Debe seleccionar los pagos desde la primera serie pendiente y en orden consecutivo.'
+                    });
+
+                    e.preventDefault();
+                    return;
+                }
+
                 let saldo = parseFloat($('#saldo').val());
                 let debe = parseFloat($('#monto_saldar').val());
                 let fecha = $('#fecha_ultimo_descuento').val();
                 let formapago = $('#forma_pago').val();
                 let metodopago = $('#metodo_pago').val();
+                const FORMA_TRASLADO_AHORRO = 'LIQUIDACIÓN DE PRÉSTAMO - TRASLADO DE AHORRO';
+                const formaPagoTexto = $('#forma_pago option:selected').text().trim();
 
                 if (isNaN(saldo) || isNaN(debe) || debe <= 0 ) {
                     //alert("Error: No se pudieron leer los valores de saldo o debe.");
@@ -420,6 +611,7 @@
                     return;
                 }
 
+                /*
                 if (saldo < debe) {
                     console.log('b');
                     //alert("El saldo no puede ser menor al monto adeudado.");
@@ -429,6 +621,18 @@
                         text: 'Por favor verifique la información.',
                     });
                     e.preventDefault(); // Evita el envío del formulario
+                }*/
+
+                if (formaPagoTexto === 'LIQUIDACIÓN DE PRÉSTAMO - TRASLADO DE AHORRO' && saldo < debe) {
+                    console.log('b');
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Saldo insuficiente',
+                        text: 'Para la liquidación por traslado de ahorro, el saldo no puede ser menor al monto adeudado.',
+                    });
+
+                    e.preventDefault();
+                    return;
                 }
 
                 if(fecha == ''){
@@ -461,6 +665,62 @@
                     e.preventDefault(); // Evita el envío del formulario
                 }
             });
+
+            //SELECT2
+            const $formaPago  = $('#forma_pago');
+            const $metodoPago = $('#metodo_pago');
+
+            // ⛔ DESHABILITAR select2 desde el inicio
+            $metodoPago.prop('disabled', true);
+            $metodoPago.val('-1').trigger('change');
+
+            function resetMetodoPago() {
+                $metodoPago.val('-1').trigger('change');
+
+                $metodoPago.find('option').prop('disabled', false);
+            }
+
+            $formaPago.on('change', function () {
+
+                const valor = $(this).val();
+
+                // ⛔ Si no selecciona nada válido, deshabilitar nuevamente
+                if (valor === '-1' || valor === null || valor === '') {
+                    $metodoPago.prop('disabled', true);
+                    resetMetodoPago();
+                    return;
+                }
+
+                // ✅ HABILITAR select2
+                $metodoPago.prop('disabled', false);
+                resetMetodoPago();
+
+                // 1️⃣ REESTRUCTURACIÓN → deshabilita traslado
+                if (valor === 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN') {
+
+                    $metodoPago
+                        .find('option[value="TRASLADO DE AHORRO"]')
+                        .prop('disabled', true);
+                }
+
+                // 2️⃣ TRASLADO DE AHORRO → solo traslado
+                if (valor === 'LIQUIDACIÓN DE PRÉSTAMO - TRASLADO DE AHORRO') {
+
+                    $metodoPago.find('option').each(function () {
+                        if (
+                            $(this).val() !== 'TRASLADO DE AHORRO' &&
+                            $(this).val() !== '-1'
+                        ) {
+                            $(this).prop('disabled', true);
+                        }
+                    });
+                }
+
+                // 🔄 refrescar Select2
+                $metodoPago.trigger('change.select2');
+            });
+
+
         });
     </script>
 @stop

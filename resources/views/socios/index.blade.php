@@ -285,7 +285,7 @@
                             "_token": "{{ csrf_token() }}",
                         },
                         success: function(response) {
-                            //console.log('success:', JSON.stringify(response));
+                            console.log('success:', JSON.stringify(response));
                             $(".modalPrestamos").modal('show');
                             if (response.result === "success") {
                                 // DATOS DEL SOCIO
