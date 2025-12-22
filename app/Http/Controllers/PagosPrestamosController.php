@@ -38,20 +38,47 @@ class PagosPrestamosController extends Controller
         return view('pagos_prestamos_excel.create');
     }
 
+    private function recalcularSeriePrestamo(int $prestamoId): void
+    {
+        $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $prestamoId)
+            ->where('pagado', 1)
+            ->max('serie_pago');
+
+        Prestamos::where('id', $prestamoId)->update([
+            'serie' => $ultimaSeriePagada ?? 0
+        ]);
+    }
+
     public function store(Request $request)
     {
         try {
             \DB::beginTransaction();
             // OBTENEMOS LOS DATOS PARA ABONAR EL PRESTAMO
             $datosFormulario = $request->all();
+
             if (isset($datosFormulario['prestamos_id']) && count($datosFormulario['prestamos_id']) > 0) {
 
                 foreach ($request->prestamos_id as $key => $value) {
+
                     //BUSCAMOS EL REGISTRO PARA REALIZAR EL ABONO
-                    $prestamoPago = PagosPrestamos::where('prestamos_id', '=', $request->prestamos_id[$key])
+                    /*$prestamoPago = PagosPrestamos::where('prestamos_id', '=', $request->prestamos_id[$key])
                     ->where('serie_pago', '=', $request->serie_pago[$key])
                     //->get();
                     ->first();
+                    */
+
+                    $seriePendiente = PagosPrestamos::where('prestamos_id', $request->prestamos_id[$key])
+                        ->where('pagado', 0)
+                        ->min('serie_pago');
+
+                    if (!$seriePendiente) {
+                        continue; // ya no hay pagos pendientes
+                    }
+
+                    $prestamoPago = PagosPrestamos::where('prestamos_id', $request->prestamos_id[$key])
+                        ->where('serie_pago', $seriePendiente)
+                        ->where('pagado', 0)
+                        ->first();
 
                     $idprestamoPago = 0;
                     if ($prestamoPago) {
@@ -305,11 +332,14 @@ class PagosPrestamosController extends Controller
                 }
 
                 // ACTUALIZAMOS LA SERIE DEL PRESTAMO
-                foreach ($request->prestamos_id as $key => $value) {
+                /*foreach ($request->prestamos_id as $key => $value) {
                     $prestamoSerie = Prestamos::findorfail($request->prestamos_id[$key]);
                     $prestamoSerie->update([
                         'serie' => $prestamoSerie->serie +1
                     ]);
+                }*/
+                foreach ($request->prestamos_id as $prestamoId) {
+                    $this->recalcularSeriePrestamo($prestamoId);
                 }
 
                 // ACTUALIZAMOS LA PRÓXIMA FECHA DE PAGO DE LOS PRÉSTAMOS
@@ -711,7 +741,7 @@ class PagosPrestamosController extends Controller
                     $pago_quincenal = $prestamo->pago_quincenal;
                     $pagoQuincenal  = number_format($pago_quincenal / 100, 2);
                     //if ($prestamo->nombre_completo === $nombreCompleto &&
-                    if ($normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
+                    /*if ($normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
                         $pagoQuincenal == $importe &&
                         $prestamo->compara_pago == 0 &&
                         ($prestamo->serie + 1) == $serie ) {
@@ -721,8 +751,30 @@ class PagosPrestamosController extends Controller
                         ]);
                         $encontrado = true;
                         break; // Termina el bucle una vez que se ha encontrado una coincidencia
-                    }
+                    }*/
+
+                        // 🔹 OBTENER LA SERIE PENDIENTE REAL
+                        $seriePendiente = PagosPrestamos::where('prestamos_id', $prestamo->id)
+                            ->where('pagado', 0)
+                            ->min('serie_pago');
+
+                        if (
+                            $normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
+                            $pagoQuincenal == $importe &&
+                            $prestamo->compara_pago == 0 &&
+                            $seriePendiente !== null &&
+                            $seriePendiente == $serie
+                        ) {
+                            // ✅ Coincidencia correcta (normal o adelanto)
+                            $prestamo->update([
+                                'compara_pago' => 1
+                            ]);
+
+                            $encontrado = true;
+                            break;
+                        }
                 }
+
 
                 // Registra los datos repetidos
                 if ($encontrado) {

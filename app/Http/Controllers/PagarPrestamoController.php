@@ -86,7 +86,7 @@ class PagarPrestamoController extends Controller
 
     public function store(Request $request)
     {
-        //dd($request);
+        //dd($request->all());
         try {
 
             $pagosIds = $request->prestamos_id ?? [];
@@ -114,38 +114,57 @@ class PagarPrestamoController extends Controller
             }
             */
 
-            // VALIDACIÓN DE SERIES CONSECUTIVAS + SERIE INICIAL CORRECTA
-            $pagos = PagosPrestamos::whereIn('id', $pagosIds)
-                ->orderBy('prestamos_id')
-                ->orderBy('serie_pago')
-                ->get()
-                ->groupBy('prestamos_id');
+            $fechaUltimoDescuento = Carbon::createFromFormat(
+                'Y-m-d',
+                $request->fecha_ultimo_descuento
+            )->startOfDay();
 
-            foreach ($pagos as $prestamoId => $pagosPrestamo) {
+            $pagosSeleccionados = PagosPrestamos::whereIn('id', $pagosIds)
+            ->orderBy('prestamos_id')
+            ->orderBy('serie_pago')
+            ->get()
+            ->groupBy('prestamos_id');
 
-                $series = $pagosPrestamo->pluck('serie_pago')->values();
+            foreach ($pagosSeleccionados as $prestamoId => $pagosPrestamo) {
 
-                // 🔹 1) Validar que inicie en la serie correcta
-                $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $prestamoId)
-                    ->where('pagado', 1)
-                    ->max('serie_pago') ?? 0;
+                // Series seleccionadas
+                $seriesSeleccionadas = $pagosPrestamo->pluck('serie_pago')->values();
 
-                if ($series->first() !== $ultimaSeriePagada + 1) {
+                // Series válidas reales (según fecha)
+                $seriesValidas = PagosPrestamos::where('prestamos_id', $prestamoId)
+                    ->where('pagado', 0)
+                    ->whereDate('fecha_tabla', '>', $fechaUltimoDescuento)
+                    ->orderBy('serie_pago')
+                    ->pluck('serie_pago')
+                    ->values();
+
+                if ($seriesValidas->isEmpty()) {
                     return redirect()->back()
                         ->with(
                             'error',
-                            "El préstamo {$prestamoId} debe iniciar desde la serie " . ($ultimaSeriePagada + 1)
+                            "El préstamo {$prestamoId} no tiene pagos posteriores al último descuento."
                         )
                         ->withInput();
                 }
 
-                // 🔹 2) Validar que las series sean consecutivas
-                for ($i = 1; $i < $series->count(); $i++) {
-                    if ($series[$i] !== $series[$i - 1] + 1) {
+                // 🔴 1) Debe iniciar en la primera serie válida
+                if ($seriesSeleccionadas->first() !== $seriesValidas->first()) {
+                    return redirect()->back()
+                        ->with(
+                            'error',
+                            "El préstamo {$prestamoId} debe iniciar desde la serie {$seriesValidas->first()}."
+                        )
+                        ->withInput();
+                }
+
+                // 🔴 2) No permitir saltos
+                for ($i = 0; $i < $seriesSeleccionadas->count(); $i++) {
+
+                    if (!isset($seriesValidas[$i]) || $seriesSeleccionadas[$i] !== $seriesValidas[$i]) {
                         return redirect()->back()
                             ->with(
                                 'error',
-                                "Las series del préstamo {$prestamoId} no son consecutivas."
+                                "Las series del préstamo {$prestamoId} deben ser consecutivas sin saltos."
                             )
                             ->withInput();
                     }
@@ -160,6 +179,7 @@ class PagarPrestamoController extends Controller
             $prestamosIds = [];
             $formaPago = $request->forma_pago;
             $afectaSaldoSocio = $formaPago !== 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN';
+            $totalInteresesAdelantados = 0;
 
             if (!empty($pagosIds)) {
                 foreach ($pagosIds as $pagoId) {
@@ -168,6 +188,9 @@ class PagarPrestamoController extends Controller
                     $pago = PagosPrestamos::where('id', $pagoId)
                         ->where('pagado', 0)
                         ->firstOrFail();
+
+                    // 🔹 Acumular intereses de esta serie
+                    $totalInteresesAdelantados += $pago->interes ?? 0;
 
                     // Guardas los IDs para enviarlos después
                     if ($pago->prestamos_id > 0) {
@@ -317,12 +340,16 @@ class PagarPrestamoController extends Controller
 
                         $socio = Socios::find($prestamo->socios_id);
                         $lastId = Movimiento::max('id') ?? 0;
+                        $saldoActual = $socio->saldo;
+                        if ($afectaSaldoSocio) {
+                            $saldoActual = $socio->saldo - $abonoReal;
+                        }
                         Movimiento::create([
                             'socios_id'       => $prestamo->socios_id,
                             'fecha'           => now(),
                             'folio'           => 'MOV-' . ($lastId + 1),
                             'saldo_anterior'  => $socio->saldo,
-                            'saldo_actual'    => $socio->saldo - $abonoReal,
+                            'saldo_actual'    => $saldoActual,
                             'monto'           => $abonoReal,
                             'movimiento'      => 'PAGO PRÉSTAMO',
                             'tipo_movimiento' => 'ABONO',
@@ -331,11 +358,36 @@ class PagarPrestamoController extends Controller
                         ]);
                         $socio->decrement('monto_prestamos', $abonoReal);
 
-                        //VALIDA SI ES POR PAGO CON SALDO DEL SOCIO 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN', 
+                        //VALIDA SI ES POR PAGO CON SALDO DEL SOCIO 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN',
                         if ($afectaSaldoSocio) {
                             $socio->decrement('saldo', $abonoReal);
                         }
                     }
+                }
+
+                // CONDONACIÓN DE INTERESES
+                if ($totalInteresesAdelantados > 0 && $prestamo) {
+
+                    $socio = Socios::find($prestamo->socios_id);
+                    $lastId = Movimiento::max('id') ?? 0;
+
+                    // 🔹 ajustar préstamo
+                    $prestamo->increment('abona', $totalInteresesAdelantados);
+                    $prestamo->decrement('debe', $totalInteresesAdelantados);
+
+                    // 🔹 movimiento contable (NO afecta saldo)
+                    Movimiento::create([
+                        'socios_id'       => $prestamo->socios_id,
+                        'fecha'           => now(),
+                        'folio'           => 'MOV-' . ($lastId + 1),
+                        'saldo_anterior'  => $socio->saldo,
+                        'saldo_actual'    => $socio->saldo,
+                        'monto'           => $totalInteresesAdelantados,
+                        'movimiento'      => 'CONDONACIÓN DE INTERESES POR ADELANTO',
+                        'tipo_movimiento' => 'AJUSTE',
+                        'metodo_pago'     => 'SISTEMA',
+                        'estatus'         => 'EFECTUADO',
+                    ]);
                 }
 
                 // Eliminar IDs duplicados

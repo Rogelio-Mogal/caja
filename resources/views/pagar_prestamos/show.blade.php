@@ -155,7 +155,7 @@
                     <div class="col-lg-3 col-md-3 col-sm-6">
                         <div class="col mb-3">
                             <div class="form-outline">
-                                
+
                                 {{ Form::hidden('h_forma_pago') }}
 
                                 {!! Form::select(
@@ -182,7 +182,7 @@
                     <div class="col-lg-3 col-md-3 col-sm-6">
                         <div class="col mb-3">
                             <div class="form-outline">
-                                
+
                                 {{ Form::hidden('h_metodo_pago') }}
 
                                 {!! Form::select(
@@ -208,10 +208,11 @@
                         </div>
                     </div>
 
-                    
+
 
                     <div class="col-lg-2 col-md-2 col-sm-6">
                         <div class="col mb-3">
+                            {{--
                             <div class="form-outline">
                                 <input type="date" name="fecha_ultimo_descuento" id="fecha_ultimo_descuento" class="form-control"
                                     value="{{ request('fecha_ultimo_descuento', \Carbon\Carbon::now('America/Mexico_City')->toDateString()) }}">
@@ -219,6 +220,13 @@
                                 <div class="form-helper" id="sangre_feedback" style="color: red; display: none;">Este
                                     campo es requerido.</div>
                             </div>
+                            --}}
+
+                            <div class="form-outline datepicker-translated" data-mdb-toggle-button="false">
+                                    {{ Form::text('fecha_ultimo_descuento', null, ['id' => 'fecha_ultimo_descuento', 'name' => 'fecha_ultimo_descuento', 'value' => request('fecha_ultimo_descuento', \Carbon\Carbon::now('America/Mexico_City')->toDateString()) , 'data-mdb-toggle' => 'datepicker', 'class' => 'form-control', 'placeholder' => 'FECHA DEL PRIMER PAGO']) }}
+                                <label for="fecha_ultimo_descuento" class="form-label">ÚLTIMO DESCUENTO</label>
+                            </div>
+
                             @error('fecha_ultimo_descuento')
                                 <p class="error-message text-danger">{{ $message }}</p>
                             @enderror
@@ -239,7 +247,7 @@
                         </div>
                     </div>
                 </div>
-                
+
             </div>
             <div class="card-body">
                 <div class="register-box-body">
@@ -292,7 +300,8 @@
                                                     value="{{ $row->pago_id }}"
                                                     data-debe="{{ $row->capital }}"
                                                     data-group="{{ str_replace(' ', '_', $row->numero_prestamo) }}"
-                                                    data-serie="{{ $row->serie_pago }}">
+                                                    data-serie="{{ $row->serie_pago }}"
+                                                    data-fecha="{{ \Carbon\Carbon::parse($row->fecha_tabla)->format('Y-m-d') }}">
 
 
 
@@ -382,13 +391,13 @@
             let min = null;
 
             document
-                .querySelectorAll(`.prestamo-check[data-group="${group}"]`)
+                .querySelectorAll(`.prestamo-check[data-group="${group}"]:not(:disabled)`)
                 .forEach(cb => {
                     let serie = parseInt(cb.dataset.serie);
                     if (min === null || serie < min) {
                         min = serie;
                     }
-                });
+            });
 
             return min;
         }
@@ -398,7 +407,7 @@
             let series = [];
 
             document
-                .querySelectorAll(`.prestamo-check[data-group="${group}"]:checked`)
+                .querySelectorAll(`.prestamo-check[data-group="${group}"]:checked:not(:disabled)`)
                 .forEach(cb => {
                     series.push(parseInt(cb.dataset.serie));
                 });
@@ -439,11 +448,58 @@
             return invalido;
         }
 
+        function filtrarPorFecha() {
+            let fechaSeleccionada = $('#fecha_ultimo_descuento').val();
+            if (!fechaSeleccionada) return;
+
+            let fechaBase = new Date(fechaSeleccionada + 'T00:00:00');
+
+            $('.prestamo-check').each(function () {
+                let fechaPago = $(this).data('fecha'); // YYYY-MM-DD
+                let fechaCheckbox = new Date(fechaPago + 'T00:00:00');
+
+                console.log('fechaPago: '+fechaPago+' fechaCheckbox: '+fechaCheckbox);
+
+                // ❌ Si el pago es menor o igual a la fecha seleccionada
+                if (fechaCheckbox <= fechaBase) {
+                    this.checked = false;
+                    this.disabled = true;
+                } else {
+                    this.disabled = false;
+                }
+            });
+
+            actualizarTotal();
+        }
+
+
 
         document.addEventListener('DOMContentLoaded', function () {
             actualizarTotal();
+            filtrarPorFecha();
         });
-        
+
+        const datepickerElement = document.querySelector('.datepicker-translated');
+
+        datepickerElement.addEventListener('dateChange.mdb.datepicker', function (e) {
+            // Fecha seleccionada en formato Date
+            const selectedDate = e.date;
+
+            if (!selectedDate) return;
+
+            // Convertir a YYYY-MM-DD
+            const yyyy = selectedDate.getFullYear();
+            const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(selectedDate.getDate()).padStart(2, '0');
+
+            const fechaFormateada = `${yyyy}-${mm}-${dd}`;
+
+            // Forzar valor correcto en el input
+            $('#fecha_ultimo_descuento').val(fechaFormateada);
+
+            filtrarPorFecha();
+        });
+
 
         /*document.addEventListener('DOMContentLoaded', function () {
             const checkboxes = document.querySelectorAll('.prestamo-check');
@@ -536,16 +592,38 @@
                 let group = $(this).data('group');
                 let checked = this.checked;
 
-                $('.prestamo-check').each(function () {
-                    if ($(this).data('group') === group) {
-                        this.checked = checked;
+                if (!checked) {
+                    // Desmarcar todas las válidas
+                    $(`.prestamo-check[data-group="${group}"]`).prop('checked', false);
+                    actualizarTotal();
+                    return;
+                }
+
+                let serieMinima = obtenerSerieMinima(group);
+                let siguiente = serieMinima;
+
+                $(`.prestamo-check[data-group="${group}"]:not(:disabled)`).each(function () {
+                    let serie = parseInt($(this).data('serie'));
+
+                    if (serie === siguiente) {
+                        this.checked = true;
+                        siguiente++;
+                    } else {
+                        this.checked = false;
                     }
                 });
 
                 actualizarTotal();
             });
 
+
+
             $(document).on('change', '.prestamo-check', function () {
+                if (this.disabled) {
+                    this.checked = false;
+                    return;
+                }
+
                 let group = $(this).data('group');
 
                 if (!esSeleccionValida(group)) {
@@ -563,6 +641,36 @@
                 actualizarTotal();
             });
 
+
+            // CALENDARIO
+            const datepickerTranslated = document.querySelector('.datepicker-translated');
+            const filterFunction = (date) => {
+                const dayOfMonth = date.getDate();
+                const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+                // Permite la selección solo si es el día 15 o el último día del mes
+                return dayOfMonth === 15 || dayOfMonth === lastDayOfMonth;
+            }
+            new mdb.Datepicker(datepickerTranslated, {
+                confirmDateOnSelect: true,
+                disablePast: false, // true para solo mes actual; false para meses anteriores
+                title: 'Seleccione la fecha del primer pago',
+                monthsFull: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                    'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                ],
+                monthsShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov',
+                    'Dic'
+                ],
+                weekdaysFull: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag',
+                    'Samstag'
+                ],
+                weekdaysShort: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'],
+                weekdaysNarrow: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
+                okBtnText: 'Ok',
+                clearBtnText: 'Limpiar',
+                cancelBtnText: 'Cancelar',
+                filter: filterFunction
+            });
 
             let totalcapint = 0;
             let totalinteres = 0;
