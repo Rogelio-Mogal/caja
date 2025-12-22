@@ -145,7 +145,6 @@ if ($userPrinterSize == '58'){
                 <tr>
                     <td colspan="4"><strong>AHORROS: ${{ number_format($socio->saldo, 2) }}</strong></td>
                 </tr>
-                {{ dd($prestamos) }}
                 @foreach ($prestamos as $index => $prestamo)
                     <tr>
                         <td colspan="4" style="padding-left: 10px;">
