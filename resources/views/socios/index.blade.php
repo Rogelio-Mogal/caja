@@ -31,9 +31,13 @@
         //$mesEnEspanol = $desiredDate->formatLocalized('%B');
 
         if ($today->day > 15) {
-            $desiredDate = $today->copy()->endOfMonth(); // Último día del mes actual
+            //$desiredDate = $today->copy()->endOfMonth(); // Último día del mes actual
+            // Del 15 al fin de mes → día 15 del mes actual
+            $desiredDate = $today->copy()->day(15);
         } else {
-            $desiredDate = $today->copy()->day(15); // Día 15 del mes actual
+            //$desiredDate = $today->copy()->day(15); // Día 15 del mes actual
+            // Del 1 al 14 → último día del mes anterior
+            $desiredDate = $today->copy()->subMonth()->endOfMonth();
         }
         $day = $desiredDate->day;
         $year = $desiredDate->year;
@@ -203,16 +207,16 @@
                     },
                     {
                         data: null,
-                        render: function(data, type, row) {  
-                            var cuenta = ''; 
+                        render: function(data, type, row) {
+                            var cuenta = '';
                             if(row.users_id == 0){
                                 cuenta = '<li>' +
                                     '<a type="button" class="dropdown-item" href="usuarios/create?id=' + row.id + '">' +
                                     'Crear cuenta de acceso'+
                                     '</a>' +
                                 '</li>' ;
-                            }  
-                                                    
+                            }
+
                             return '<div class="btn-group">' +
                                 '<button type="button" class="btn btn-primary dropdown-toggle"' +
                                 'data-mdb-toggle="dropdown" aria-expanded="false">' +
@@ -315,7 +319,7 @@
                                     var item = prestamos[i];
                                     //var totalQuincenas = parseInt(item.total_quincenas);
                                     //var serie = parseInt(item.serie);
-                                    
+
                                     var capitalPendiente = parseFloat(item.capital_pendiente);
                                     var serie = item.ultima_serie_pagada ? parseInt(item.ultima_serie_pagada.serie_pago) : 0;
                                     var totalQuincenas = item.ultimo_pago_pendiente ? parseInt(item.ultimo_pago_pendiente.serie_final) : item.total_quincenas;
@@ -334,7 +338,7 @@
                                 html += ' </ul> ';
                                 let montoDeuda = parseFloat(deudaTotal) + parseFloat(montoAval);
                                 let resultado = parseFloat(disponible) - parseFloat(montoDeuda);
-                                
+
                                 $('#listPrestamos').html(html);
                                 $('#deuda').html(formatToCurrency(deudaTotal));
                                 $('#disponible').html(formatToCurrency(Math.max(0, resultado)));
