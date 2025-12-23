@@ -49,6 +49,16 @@ class PagosPrestamosController extends Controller
         ]);
     }
 
+    private function prestamoLiquidadoPorAdelanto(int $prestamoId): bool
+    {
+        $ultimoPago = PagosPrestamos::where('prestamos_id', $prestamoId)
+            ->orderByDesc('serie_pago')
+            ->first();
+
+        return $ultimoPago && !is_null($ultimoPago->forma_pago);
+    }
+
+
     public function store(Request $request)
     {
         try {
@@ -61,12 +71,6 @@ class PagosPrestamosController extends Controller
                 foreach ($request->prestamos_id as $key => $value) {
 
                     //BUSCAMOS EL REGISTRO PARA REALIZAR EL ABONO
-                    /*$prestamoPago = PagosPrestamos::where('prestamos_id', '=', $request->prestamos_id[$key])
-                    ->where('serie_pago', '=', $request->serie_pago[$key])
-                    //->get();
-                    ->first();
-                    */
-
                     $seriePendiente = PagosPrestamos::where('prestamos_id', $request->prestamos_id[$key])
                         ->where('pagado', 0)
                         ->min('serie_pago');
@@ -93,37 +97,11 @@ class PagosPrestamosController extends Controller
                         ]);
                     }
 
-
-                    /*
-                    foreach ($prestamoPago as $pago) {
-                        dd($pago);
-                        $idprestamoPago = $pago->id;
-                        $pago->update([
-                            'pagado' => 1,
-                            'fecha_pago' => $request->fecha_pago[$key],
-                            'fecha_captura' => Carbon::now(),
-                            'wci' => auth()->user()->id,
-                        ]);
-                    }*/
-
-                   /* $prestamoPago = new PagosPrestamos();
-                    $prestamoPago->prestamos_id = $request->prestamos_id[$key];
-                    $prestamoPago->socios_id = $request->socios_id[$key];
-                    $prestamoPago->fecha_pago = $request->fecha_pago[$key];
-                    $prestamoPago->fecha_captura = Carbon::now();
-                    $prestamoPago->serie_pago = $request->serie_pago[$key];
-                    $prestamoPago->serie_final = $request->serie_final[$key];
-                    $prestamoPago->importe = $request->importe[$key];
-                    $prestamoPago->wci = auth()->user()->id;
-                    $prestamoPago->save();
-                    $idprestamoPago = $prestamoPago->id;*/
-
                     // BUSCAMOS SI EL PRESTAMO TIENE AVALES
                     $avales = PrestamoDetalle::where('prestamos_id', '=', $request->prestamos_id[$key])
                         ->where('debe', '>', 0)
-                        //->whereRaw('debe > 0')
                         ->get(['prestamo_detalles.*']);
-                        //dd($avales);
+
                     if ($avales->count() > 0) {
                         $totalAvales = $avales->count();
                         $abonoAval = $prestamoPago->capital / $totalAvales;
@@ -187,11 +165,15 @@ class PagosPrestamosController extends Controller
                             $avalDetalle = PrestamoDetalle::find($row->id);
                             if ($avalDetalle->debe == 0) {
                                 $aval_socio = Socios::find($avalDetalle->socios_id);
-                                if ($aval_socio) {
+                                /*if ($aval_socio) {
                                     $aval_socio->update([
                                         'is_aval' => $aval_socio->is_aval - 1,
                                     ]);
+                                }*/
+                                if ($avalDetalle->debe == 0 && !$this->prestamoLiquidadoPorAdelanto($avalDetalle->prestamos_id)) {
+                                    $aval_socio->decrement('is_aval');
                                 }
+
                             }
                         }
 
@@ -251,18 +233,10 @@ class PagosPrestamosController extends Controller
                             }
                         }
                     } else {
-                        //dd($prestamoPago->capital);
                         $abonoAvalCapital = 0;
                         $abonoAvalDescuento = 0;
-                        /*foreach ($prestamoPago as $pago) {
-                            $abonoAvalCapital = $pago->capital;
-                            $abonoAvalDescuento = $pago->decuento;
-                        }*/
-
-                        //foreach ($prestamoPago as $pago) {
-                            $abonoAvalCapital = $prestamoPago->capital;
-                            $abonoAvalDescuento = $prestamoPago->decuento;
-                        //}
+                        $abonoAvalCapital = $prestamoPago->capital;
+                        $abonoAvalDescuento = $prestamoPago->decuento;
 
                         // ABONO DEL CLIENTE SIN AVAL
                         //$abonoAval = $prestamoPago->capital;
@@ -287,10 +261,13 @@ class PagosPrestamosController extends Controller
                         $socioDetalle = Prestamos::find($rowPrestamo->id);
                         if ($socioDetalle->debe == 0) {
                             $socio_socio = Socios::find($socioDetalle->socios_id);
-                            if ($socio_socio) {
+                            /*if ($socio_socio) {
                                 $socio_socio->update([
                                     'numero_prestamos' => $socio_socio->numero_prestamos - 1,
                                 ]);
+                            }*/
+                            if ($socio_socio->debe == 0 && !$this->prestamoLiquidadoPorAdelanto($rowPrestamo->id)) {
+                                $socio_socio->decrement('numero_prestamos');
                             }
                         }
 
@@ -332,12 +309,6 @@ class PagosPrestamosController extends Controller
                 }
 
                 // ACTUALIZAMOS LA SERIE DEL PRESTAMO
-                /*foreach ($request->prestamos_id as $key => $value) {
-                    $prestamoSerie = Prestamos::findorfail($request->prestamos_id[$key]);
-                    $prestamoSerie->update([
-                        'serie' => $prestamoSerie->serie +1
-                    ]);
-                }*/
                 foreach ($request->prestamos_id as $prestamoId) {
                     $this->recalcularSeriePrestamo($prestamoId);
                 }

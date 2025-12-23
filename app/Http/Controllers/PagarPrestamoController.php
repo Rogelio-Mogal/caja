@@ -86,7 +86,6 @@ class PagarPrestamoController extends Controller
 
     public function store(Request $request)
     {
-        //dd($request->all());
         try {
 
             $pagosIds = $request->prestamos_id ?? [];
@@ -97,22 +96,6 @@ class PagarPrestamoController extends Controller
                 ->with('error', 'Debe seleccionar al menos un pago.')
                 ->withInput();
             }
-
-            // VALIDACIÓN DE SERIES CONSECUTIVAS
-            /*$series = PagosPrestamos::whereIn('id', $pagosIds)
-                ->orderBy('serie_pago')
-                ->pluck('serie_pago')
-                ->values(); // importante para índices correctos
-
-            for ($i = 1; $i < $series->count(); $i++) {
-                if ($series[$i] !== $series[$i - 1] + 1) {
-                    dd('sjksnf');
-                    return redirect()->back()
-                    ->with('error', 'Las series seleccionadas no son consecutivas.')
-                    ->withInput();
-                }
-            }
-            */
 
             $fechaUltimoDescuento = Carbon::createFromFormat(
                 'Y-m-d',
@@ -179,7 +162,9 @@ class PagarPrestamoController extends Controller
             $prestamosIds = [];
             $formaPago = $request->forma_pago;
             $afectaSaldoSocio = $formaPago !== 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN';
-            $totalInteresesAdelantados = 0;
+            //$totalInteresesAdelantados = 0;
+
+            $interesesPorPrestamo = [];
 
             if (!empty($pagosIds)) {
                 foreach ($pagosIds as $pagoId) {
@@ -189,8 +174,17 @@ class PagarPrestamoController extends Controller
                         ->where('pagado', 0)
                         ->firstOrFail();
 
+                    // ACUMULAR INTERES POR PRÉSTAMO INDIVIDUAL
+                    $prestamoId = $pago->prestamos_id;
+
+                    if (!isset($interesesPorPrestamo[$prestamoId])) {
+                        $interesesPorPrestamo[$prestamoId] = 0;
+                    }
+
+                    $interesesPorPrestamo[$prestamoId] += $pago->interes ?? 0;
+
                     // 🔹 Acumular intereses de esta serie
-                    $totalInteresesAdelantados += $pago->interes ?? 0;
+                    //$totalInteresesAdelantados += $pago->interes ?? 0;
 
                     // Guardas los IDs para enviarlos después
                     if ($pago->prestamos_id > 0) {
@@ -315,7 +309,8 @@ class PagarPrestamoController extends Controller
                                 'estatus'         => 'EFECTUADO',
                             ]);
 
-                            $socio->decrement('monto_prestamos', $capitalRestante + $interes);
+                            $socio->decrement('monto_prestamos', $capitalRestante);
+                            //$socio->decrement('monto_prestamos', $capitalRestante + $interes);
                             //$socio->decrement('saldo', $capitalRestante + $interes);
                         }
                     } else {
@@ -366,23 +361,32 @@ class PagarPrestamoController extends Controller
                 }
 
                 // CONDONACIÓN DE INTERESES
-                if ($totalInteresesAdelantados > 0 && $prestamo) {
+                foreach ($interesesPorPrestamo as $prestamoId => $interesCondonado) {
+
+                    if ($interesCondonado <= 0) {
+                        continue;
+                    }
+
+                    $prestamo = Prestamos::find($prestamoId);
+                    if (!$prestamo) {
+                        continue;
+                    }
 
                     $socio = Socios::find($prestamo->socios_id);
                     $lastId = Movimiento::max('id') ?? 0;
 
-                    // 🔹 ajustar préstamo
-                    $prestamo->increment('abona', $totalInteresesAdelantados);
-                    $prestamo->decrement('debe', $totalInteresesAdelantados);
+                    // 🔹 Ajuste contable del préstamo
+                    $prestamo->increment('abona', $interesCondonado);
+                    $prestamo->decrement('debe', $interesCondonado);
 
-                    // 🔹 movimiento contable (NO afecta saldo)
+                    // 🔹 Movimiento contable (NO afecta saldo)
                     Movimiento::create([
                         'socios_id'       => $prestamo->socios_id,
                         'fecha'           => now(),
                         'folio'           => 'MOV-' . ($lastId + 1),
                         'saldo_anterior'  => $socio->saldo,
                         'saldo_actual'    => $socio->saldo,
-                        'monto'           => $totalInteresesAdelantados,
+                        'monto'           => $interesCondonado,
                         'movimiento'      => 'CONDONACIÓN DE INTERESES POR ADELANTO',
                         'tipo_movimiento' => 'AJUSTE',
                         'metodo_pago'     => 'SISTEMA',
@@ -392,30 +396,6 @@ class PagarPrestamoController extends Controller
 
                 // Eliminar IDs duplicados
                 $prestamosIds = array_unique($prestamosIds);
-
-                /*
-                // Verificar fin de préstamo **una sola vez por préstamo**
-                foreach ($prestamosIds as $id) {
-                    $this->verificarFinPrestamo($id);
-                }
-
-                // Actualizar serie de los préstamos
-                foreach ($prestamosIds as $id) {
-                    $prestamoSerie = Prestamos::findOrFail($id);
-                    //$prestamoSerie->update([
-                    //    'serie' => $prestamoSerie->total_quincenas
-                    //]);
-                    $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $id)
-                        ->where('pagado', 1)
-                        ->max('serie_pago');
-
-                    if (!is_null($ultimaSeriePagada)) {
-                        Prestamos::where('id', $id)->update([
-                            'serie' => $ultimaSeriePagada
-                        ]);
-                    }
-                }
-                */
 
                 foreach ($prestamosIds as $id) {
 
@@ -459,290 +439,7 @@ class PagarPrestamoController extends Controller
                 }
             }
 
-            /*
-            if (isset($datosFormulario['prestamos_id']) && count($datosFormulario['prestamos_id']) > 0) {
-                foreach ($request->prestamos_id as $key => $value) {
-
-                    // Guardas los IDs para enviarlos después
-                    if ($value > 0) {
-                        $prestamosIds[] = $value;
-                    }
-
-                     //BUSCAMOS EL REGISTRO PARA REALIZAR EL ABONO
-                    $prestamoPago = PagosPrestamos::where('prestamos_id', '=', $request->prestamos_id[$key])
-                    ->where('pagado', 0)
-                    ->get();
-
-                    $pagoCapital = $prestamoPago->sum('capital');
-
-                    $idprestamoPago = 0;
-                    foreach ($prestamoPago as $pago) {
-                        $idprestamoPago = $pago->id;
-                        $pago->update([
-                            'pagado' => 1,
-                            'forma_pago' => $request->forma_pago,
-                            'metodo_pago' => $request->metodo_pago,
-                            'referencia' => $request->referencia,
-                            'fecha_pago' => Carbon::now(),
-                            'fecha_captura' => Carbon::now(),
-                            'wci' => auth()->user()->id,
-                        ]);
-                    }
-
-                    // BUSCAMOS SI EL PRESTAMO TIENE AVALES
-                    $avales = PrestamoDetalle::where('prestamos_id', '=', $request->prestamos_id[$key])
-                        ->where('debe', '>', 0)
-                        //->whereRaw('debe > 0')
-                        ->get(['prestamo_detalles.*']);
-
-                    if ($avales->count() > 0) {
-                        $totalAvales = $avales->count();
-                        $abonoAval = $pagoCapital / $totalAvales;
-
-                        $sumaAbonosAval = 0;
-                        foreach ($avales as $row) {
-                            //ABONAMOS AL AVAL
-                            $rowPrestamo = Prestamos::findorfail($row->prestamos_id);
-
-                            // Restante disponible para abonar al aval
-                            $restanteAval = $row->debe;
-
-                            // Calcula el abono real al aval
-                            $abonoReal = min($abonoAval, $restanteAval);
-
-
-                            // Acumula la suma de abonos a los avales
-                            $sumaAbonosAval += $abonoReal;
-
-                            // CREAMOS EL DETALLE DEL PRESTAMO-ABONO
-                            PagosPrestamosDetalles::create([
-                                'pagos_prestamos_id' => $idprestamoPago,
-                                'prestamos_id' => $row->prestamos_id,
-                                'socios_id' => $row->socios_id,
-                                'tipo_cliente' => 'AVAL',
-                                'abona' => $abonoReal,
-                                'wci' => auth()->user()->id,
-                            ]);
-
-                            // ACTUALIZAMOS LOS VALORES DEL PRESTAMO
-                            $rowPrestamo->abona = $rowPrestamo->abona + $abonoReal; // Suma el abono al 'abona' existente
-                            $rowPrestamo->debe = $rowPrestamo->debe - $abonoReal; // Resta el abono de 'debe'
-                            $rowPrestamo->fecha_pago_reestructuracion = Carbon::now();
-                            $rowPrestamo->monto_pago_reestructuracion = $pagoCapital;
-                            $rowPrestamo->save();
-
-                            // MODIFICAMOS LA TABLA SOCIOS PARA EL MONTO_PRESTAMO
-                            $aval = Socios::find($row->socios_id);
-
-                            // INSERTAMOS EL MOVIMIENTO
-                            $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
-                            $nextId = $lastInsertedId + 1;
-                            Movimiento::create([
-                                'socios_id' => $row->socios_id,
-                                'fecha' => Carbon::now(),
-                                'folio' => 'MOV-' . $nextId,
-                                'saldo_anterior' => $aval->saldo,
-                                'saldo_actual' => $aval->saldo,
-                                'monto' => $abonoReal,
-                                'movimiento' => 'PAGO PRÉSTAMO',
-                                'tipo_movimiento' => 'ABONO',
-                                'metodo_pago' => 'EFECTIVO',
-                                'estatus' => 'EFECTUADO',
-                            ]);
-
-                            $aval->monto_prestamos = $aval->monto_prestamos - $abonoReal;
-                            $aval->save();
-
-                            // ACTUALIZAMOS PRESTAMOS_DETALLES DEL AVAL
-                            $row->abona = $row->abona + $abonoReal; // Suma el abono al 'abona' existente
-                            $row->debe = $row->debe - $abonoReal; // Resta el abono de 'debe'
-                            $row->save();
-
-                            // ACTUALIZAMOS SI ES AVAL
-                            $avalDetalle = PrestamoDetalle::find($row->id);
-                            if ($avalDetalle->debe == 0) {
-                                $aval_socio = Socios::find($avalDetalle->socios_id);
-                                if ($aval_socio) {
-                                    $aval_socio->update([
-                                        'is_aval' => $aval_socio->is_aval - 1,
-                                    ]);
-                                }
-                            }
-
-                            //actualiza en PrestamoDetalle el campo de el pago adelantado
-                            $avalDetalle->update([
-                                'fecha_pago_reestructuracion' => Carbon::now(),
-                                'monto_pago_reestructuracion' => $abonoReal
-                            ]);
-                        }
-
-                        // ABONO DEL CLIENTE CON AVAL PERO CON EL RESTO DEL ABONO
-                        // Calcula el capital restante después de los abonos a los avales
-                        $capitalRestante = $pagoCapital - $sumaAbonosAval;
-
-                        if ($capitalRestante > 0) {
-                            $rowPrestamo = Prestamos::findorfail($request->prestamos_id[$key]);
-                            $interes = $rowPrestamo->total_intereses / $rowPrestamo->total_quincenas;
-
-                            // ACTUALIZAMOS LOS VALORES DEL PRESTAMO
-                            $rowPrestamo->abona = $rowPrestamo->abona + $capitalRestante; // Suma el abono al 'abona' existente
-                            $rowPrestamo->debe = $rowPrestamo->debe - $capitalRestante; // Resta el abono de 'debe'
-                            $rowPrestamo->save();
-
-                            // ACTUALIZAMOS AL SOSCIO SI TIENE PRESTAMO
-                            $socioDetalle = Prestamos::find($rowPrestamo->id);
-                            if ($socioDetalle->debe == 0) {
-                                $socio_socio = Socios::find($socioDetalle->socios_id);
-                                if ($socio_socio) {
-                                    $socio_socio->update([
-                                        'numero_prestamos' => $socio_socio->numero_prestamos - 1,
-                                    ]);
-                                }
-                            }
-
-                            $capitalRestante = $capitalRestante - $interes;
-                            //dd($capitalRestante, $interes);
-                            if ($capitalRestante > 0) {
-                                PagosPrestamosDetalles::create([
-                                    'pagos_prestamos_id' => $idprestamoPago,
-                                    'prestamos_id' => $request->prestamos_id[$key],
-                                    'socios_id' => $request->socios_id,
-                                    'tipo_cliente' => 'SOCIO',
-                                    //'abona' => $capitalRestante,
-                                    'abona' => $capitalRestante + $interes,
-                                    'wci' => auth()->user()->id,
-                                ]);
-
-                                // MODIFICAMOS LA TABLA SOCIOS PARA EL MONTO_PRESTAMO
-                                $socio = Socios::find($request->socios_id);
-                                // INSERTAMOS EL MOVIMIENTO
-                                $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
-                                $nextId = $lastInsertedId + 1;
-                                Movimiento::create([
-                                    'socios_id' => $request->socios_id,
-                                    'fecha' => Carbon::now(),
-                                    'folio' => 'MOV-' . $nextId,
-                                    'saldo_anterior' => $socio->saldo,
-                                    'saldo_actual' => ($socio->saldo - $pagoCapital),
-                                    'monto' => $capitalRestante + $interes,
-                                    'movimiento' => 'PAGO PRÉSTAMO',
-                                    'tipo_movimiento' => 'ABONO',
-                                    'metodo_pago' => 'EFECTIVO',
-                                    'estatus' => 'EFECTUADO',
-                                ]);
-
-                                //$socio->monto_prestamos = $socio->monto_prestamos - $capitalRestante;
-                                $socio->monto_prestamos = $socio->monto_prestamos - ($capitalRestante + $interes );
-                                $socio->save();
-                            }
-                        }
-                    } else {
-                        // ABONO DEL CLIENTE SIN AVAL
-                        $abonoAval = $pagoCapital;
-                        $rowPrestamo = Prestamos::findorfail($request->prestamos_id[$key]);
-                        $interes = $rowPrestamo->total_intereses / $rowPrestamo->total_quincenas;
-
-                        // Restante disponible para abonar al aval
-                        $restanteAval = $rowPrestamo->debe;
-
-                        // Calcula el abono real al aval
-                        $abonoReal = min($abonoAval, $restanteAval);
-
-                        // ACTUALIZAMOS LOS VALORES DEL PRESTAMO
-                        $rowPrestamo->abona = $rowPrestamo->abona + $abonoReal; // Suma el abono al 'abona' existente
-                        $rowPrestamo->debe = 0 ;//$rowPrestamo->debe - $abonoReal; // Resta el abono de 'debe'
-                        $rowPrestamo->fecha_pago_reestructuracion = Carbon::now() ;
-                        $rowPrestamo->monto_pago_reestructuracion = $pagoCapital;
-                        $rowPrestamo->save();
-
-                        // ACTUALIZAMOS AL SOSCIO SI TIENE PRESTAMO
-                        $socioDetalle = Prestamos::find($rowPrestamo->id);
-                        if ($socioDetalle->debe == 0) {
-                            $socio_socio = Socios::find($socioDetalle->socios_id);
-                            if ($socio_socio) {
-                                $socio_socio->update([
-                                    'numero_prestamos' => $socio_socio->numero_prestamos - 1,
-                                ]);
-                            }
-                        }
-
-                        //$abonoReal = $abonoReal - $interes;
-                        // CREAMOS EL DETALLE DEL PRESTAMO-ABONO
-                        if ($abonoReal > 0) {
-                            PagosPrestamosDetalles::create([
-                                'pagos_prestamos_id' => $idprestamoPago,
-                                'prestamos_id' => $request->prestamos_id[$key],
-                                'socios_id' => $rowPrestamo->socios_id,
-                                'tipo_cliente' => 'SOCIO',
-                                'abona' => $abonoReal,
-                                'wci' => auth()->user()->id,
-                            ]);
-
-                            // MODIFICAMOS LA TABLA SOCIOS PARA EL MONTO_PRESTAMO
-                            $socio = Socios::find($rowPrestamo->socios_id);
-                            // INSERTAMOS EL MOVIMIENTO
-                            $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
-                            $nextId = $lastInsertedId + 1;
-                            Movimiento::create([
-                                'socios_id' => $request->socios_id,
-                                'fecha' => Carbon::now(),
-                                'folio' => 'MOV-' . $nextId,
-                                'saldo_anterior' => $socio->saldo,
-                                'saldo_actual' => ($socio->saldo - $pagoCapital),
-                                'monto' => $abonoReal,
-                                'movimiento' => 'PAGO PRÉSTAMO',
-                                'tipo_movimiento' => 'ABONO',
-                                'metodo_pago' => 'EFECTIVO',
-                                'estatus' => 'EFECTUADO',
-                            ]);
-                            $socio->monto_prestamos = $socio->monto_prestamos - $abonoReal;
-                            $socio->saldo = $socio->saldo - $abonoReal;
-                            $socio->save();
-                        }
-                    }
-                }
-
-                // ACTUALIZAMOS LA SERIE DEL PRESTAMO
-                foreach ($request->prestamos_id as $key => $value) {
-                    $prestamoSerie = Prestamos::findorfail($request->prestamos_id[$key]);
-                    $prestamoSerie->update([
-                        'serie' => $prestamoSerie->total_quincenas
-                    ]);
-                }
-
-                // ACTUALIZAMOS LA PRÓXIMA FECHA DE PAGO DE LOS PRÉSTAMOS
-                // Obtén la fecha actual del campo $rowPrestamo->proximo_pago
-                $fechaComparar = now()->toDateString();
-                $prestamoFecha = Prestamos::join('pagos_prestamos', 'pagos_prestamos.prestamos_id', '=', 'prestamos.id')
-                    ->whereDate('pagos_prestamos.fecha_captura', $fechaComparar)
-                    ->select('pagos_prestamos.fecha_captura', 'prestamos.proximo_pago', 'prestamos.id')
-                    ->get();
-                foreach ($prestamoFecha as $row) {
-                    $fechaActual = Carbon::parse($row->proximo_pago);
-                    // Verifica si la fecha actual es el último día del mes
-                    if ($fechaActual->isLastOfMonth()) {
-                        // La fecha actual es el último día del mes, así que calcula la nueva fecha como el día 15 del próximo mes
-                        //$nuevaFecha = $fechaActual->addMonth()->startOfMonth()->addDays(14);
-                        $nuevaFecha = $fechaActual->addDays(15);
-                    } elseif ($fechaActual->day == 15) {
-                        // La fecha actual es el día 15 de algún mes, así que calcula la nueva fecha como el último día del próximo mes
-                        //$nuevaFecha = $fechaActual->addMonth()->endOfMonth();
-                        $nuevaFecha = $fechaActual->endOfMonth();
-                    } else {
-                        // En otro caso, simplemente suma un mes a la fecha actual
-                        $nuevaFecha = $fechaActual->addMonth();
-                    }
-                    $nuevaFecha = $nuevaFecha->toDateString();
-                    //dd($request->fecha_ultimo_descuento, $nuevaFecha);
-                    Prestamos::where('id', $row->id)->update([
-                        'proximo_pago' => $nuevaFecha,
-                        'fecha_ultimo_descuento' => $request->fecha_ultimo_descuento
-                    ]);
-                }
-            }
-            */
             \DB::commit();
-            //dd($prestamosIds);
             return redirect()
                 ->route('admin.pagar.prestamo.index')
                 ->with([
@@ -751,17 +448,67 @@ class PagarPrestamoController extends Controller
                 ]);
         } catch (Exception $e) {
             \DB::rollback();
-            dd($e);
             $query = $e->getMessage();
-            dd($query);
             return json_encode($query);
-            return redirect()->back()
-                ->with(['error' => 'Hubo un error durante el proceso, por favor intenetelo de nuevo.'])
-                ->withInput($request->all(), $query);
         }
     }
 
-    private function verificarFinPrestamo($prestamoId): bool
+    private function verificarFinPrestamo(int $prestamoId): bool
+    {
+        $prestamo = Prestamos::find($prestamoId);
+
+        if (!$prestamo) {
+            return false;
+        }
+
+        // 🔍 Validar que la última serie esté pagada
+        $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $prestamoId)
+            ->where('serie_pago', $prestamo->total_quincenas)
+            ->where('pagado', 1)
+            ->exists();
+
+        if (!$ultimaSeriePagada) {
+            return false;
+        }
+
+        // 🔒 Cierre contable
+        $prestamo->update([
+            //'abona' => $prestamo->debia,
+            //'debe'  => 0,
+            'serie' => $prestamo->total_quincenas,
+        ]);
+
+        // ===============================
+        // 👤 SOCIO PRINCIPAL
+        // ===============================
+        $socioPrincipal = Socios::find($prestamo->socios_id);
+
+        if ($socioPrincipal && $socioPrincipal->numero_prestamos > 0) {
+            $socioPrincipal->decrement('numero_prestamos');
+        }
+
+        // ===============================
+        // 🤝 AVALES (DESDE PrestamoDetalle)
+        // ===============================
+        $avales = PrestamoDetalle::where('prestamos_id', $prestamoId)
+            ->select('socios_id')
+            ->distinct()
+            ->get();
+
+        foreach ($avales as $aval) {
+            $avalSocio = Socios::find($aval->socios_id);
+
+            if ($avalSocio && $avalSocio->is_aval > 0) {
+                $avalSocio->decrement('is_aval');
+            }
+        }
+
+        return true; // ✅ préstamo totalmente liquidado
+    }
+
+
+
+    private function verificarFinPrestamoNO($prestamoId): bool
     {
         $prestamo = Prestamos::find($prestamoId);
 
@@ -795,28 +542,6 @@ class PagarPrestamoController extends Controller
         }
 
         return true; // ✅ préstamo liquidado
-    }
-
-
-    private function verificarFinPrestamoNO($prestamoId)
-    {
-        $ultimoPago = PagosPrestamos::where('prestamos_id', $prestamoId)
-            ->orderByDesc('fecha_pago')
-            ->first();
-
-        if ($ultimoPago && $ultimoPago->pagado == 1) {
-            $prestamo = Prestamos::find($prestamoId);
-
-            if ($prestamo) {
-                if ($prestamo->is_aval == 1) {
-                    Socios::where('id', $prestamo->socios_id)
-                        ->decrement('is_aval');
-                } else {
-                    Socios::where('id', $prestamo->socios_id)
-                        ->decrement('numero_prestamos');
-                }
-            }
-        }
     }
 
     public function store2(Request $request)
