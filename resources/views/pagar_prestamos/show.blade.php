@@ -338,36 +338,6 @@
 
 @section('js')
     <script>
-        /*
-        document.addEventListener('DOMContentLoaded', function() {
-            const checkboxes = document.querySelectorAll('.prestamo-check');
-            const totalDisplay = document.getElementById('monto_a_saldar');
-            const inputMontoSaldar = document.getElementById('monto_saldar');
-
-            function actualizarTotal() {
-                let total = 0;
-                checkboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
-                        total += parseFloat(checkbox.dataset.debe);
-                    }
-                });
-                totalDisplay.textContent = new Intl.NumberFormat('es-MX', {
-                    style: 'currency',
-                    currency: 'MXN'
-                }).format(total);
-
-                // Guardar el valor sin formato en el input oculto
-                inputMontoSaldar.value = total.toFixed(2);
-            }
-
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', actualizarTotal);
-            });
-
-            // Llamamos a la función una vez por si hay alguno marcado desde el inicio
-            actualizarTotal();
-        });
-        */
 
         function actualizarTotal() {
             let total = 0;
@@ -468,11 +438,8 @@
                     this.disabled = false;
                 }
             });
-
             actualizarTotal();
         }
-
-
 
         document.addEventListener('DOMContentLoaded', function () {
             actualizarTotal();
@@ -499,59 +466,6 @@
 
             filtrarPorFecha();
         });
-
-
-        /*document.addEventListener('DOMContentLoaded', function () {
-            const checkboxes = document.querySelectorAll('.prestamo-check');
-            const selectAll = document.getElementById('select-all');
-            const totalDisplay = document.getElementById('monto_a_saldar');
-            const inputMontoSaldar = document.getElementById('monto_saldar');
-            */
-
-            /*function actualizarTotal() {
-                let total = 0;
-                checkboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
-                        total += parseFloat(checkbox.dataset.debe);
-                    }
-                });
-
-                totalDisplay.textContent = new Intl.NumberFormat('es-MX', {
-                    style: 'currency',
-                    currency: 'MXN'
-                }).format(total);
-
-                inputMontoSaldar.value = total.toFixed(2);
-            }*/
-
-            /*
-            // Evento para seleccionar todos
-            selectAll.addEventListener('change', function () {
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = selectAll.checked;
-                });
-                actualizarTotal();
-            });
-
-            // Eventos individuales
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function () {
-                    actualizarTotal();
-                    // Si se desmarca uno, desmarcar el select-all
-                    if (!this.checked) {
-                        selectAll.checked = false;
-                    } else if (Array.from(checkboxes).every(cb => cb.checked)) {
-                        selectAll.checked = true;
-                    }
-                });
-            });
-            */
-
-            // Calcular total inicial
-        //    actualizarTotal();
-        //});
-
-
 
         $(document).ready(function() {
 
@@ -616,8 +530,6 @@
                 actualizarTotal();
             });
 
-
-
             $(document).on('change', '.prestamo-check', function () {
                 if (this.disabled) {
                     this.checked = false;
@@ -637,7 +549,6 @@
 
                     return;
                 }
-
                 actualizarTotal();
             });
 
@@ -827,8 +738,6 @@
                 // 🔄 refrescar Select2
                 $metodoPago.trigger('change.select2');
             });
-
-
         });
     </script>
 @stop
