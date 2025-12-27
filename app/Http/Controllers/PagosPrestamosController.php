@@ -699,7 +699,6 @@ class PagosPrestamosController extends Controller
                 ->where('prestamos.debe', '>', 0)
                 ->get(['prestamos.*', 'socios.id as socios_id', 'socios.nombre_completo', 'socios.rfc']);
 
-
             foreach ($allData as $data) {
                 $nombreCompleto = $data['nombre_completo'];
                 $importeE = $data['importe'];
@@ -711,8 +710,7 @@ class PagosPrestamosController extends Controller
                 foreach ($allPrestamos as $prestamo) {
                     $pago_quincenal = $prestamo->pago_quincenal;
                     $pagoQuincenal  = number_format($pago_quincenal / 100, 2);
-                    //if ($prestamo->nombre_completo === $nombreCompleto &&
-                    /*if ($normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
+                    if ($normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
                         $pagoQuincenal == $importe &&
                         $prestamo->compara_pago == 0 &&
                         ($prestamo->serie + 1) == $serie ) {
@@ -722,30 +720,8 @@ class PagosPrestamosController extends Controller
                         ]);
                         $encontrado = true;
                         break; // Termina el bucle una vez que se ha encontrado una coincidencia
-                    }*/
-
-                        // 🔹 OBTENER LA SERIE PENDIENTE REAL
-                        $seriePendiente = PagosPrestamos::where('prestamos_id', $prestamo->id)
-                            ->where('pagado', 0)
-                            ->min('serie_pago');
-
-                        if (
-                            $normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
-                            $pagoQuincenal == $importe &&
-                            $prestamo->compara_pago == 0 &&
-                            $seriePendiente !== null &&
-                            $seriePendiente == $serie
-                        ) {
-                            // ✅ Coincidencia correcta (normal o adelanto)
-                            $prestamo->update([
-                                'compara_pago' => 1
-                            ]);
-
-                            $encontrado = true;
-                            break;
-                        }
+                    }
                 }
-
 
                 // Registra los datos repetidos
                 if ($encontrado) {
@@ -767,7 +743,6 @@ class PagosPrestamosController extends Controller
             foreach ($allPrestamos as $prestamo) {
                 $encontrado = false;
                 foreach ($allData as $data) {
-                    //if ($prestamo->nombre_completo === $data['nombre_completo'] && $prestamo->pago_quincenal == $data['importe']) {
                     if ($normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($data['nombre_completo']) &&
                         number_format($prestamo->pago_quincenal / 100, 2) == number_format($data['importe'] / 100, 2)) {
                         $encontrado = true;
@@ -808,7 +783,6 @@ class PagosPrestamosController extends Controller
                     'importe' => $row->pago_quincenal,
                 ];
                 $allSerieOk[] = $serieOk;
-
                 // Suma al total
                 $totalImporte += $row->pago_quincenal;
             }
@@ -829,8 +803,6 @@ class PagosPrestamosController extends Controller
                 ]
             );
         }
-
-
         return response()->json(['error' => 'No se ha proporcionado ningún archivo.']);
     }
 
