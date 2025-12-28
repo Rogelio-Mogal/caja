@@ -266,7 +266,7 @@
             }
             new mdb.Datepicker(datepickerTranslated, {
                 confirmDateOnSelect: true,
-                disablePast: true,
+                disablePast: false,
                 title: 'Seleccione la fecha del primer pago',
                 monthsFull: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
                     'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -320,6 +320,16 @@
                                 'content') // Incluir el token CSRF en los encabezados
                         },
                         success: function(response) {
+                            if (response.debug) {
+                                console.log('DEBUG:', response);
+                                Swal.fire({
+                                    icon: 'info',
+                                    title: 'Debug activo',
+                                    text: JSON.stringify(response, null, 2)
+                                });
+                                return;
+                            }
+
                             resolve(response); // Resuelve la promesa con los resultados
                             //console.log('asdasda');
                             //console.log(response);

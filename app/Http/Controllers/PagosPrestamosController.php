@@ -641,6 +641,12 @@ class PagosPrestamosController extends Controller
     {
         if ($request->hasFile('archivo')) {
 
+            // RESETEAMOS EL CAMPOR DE COMPARACION compara_pago
+            Prestamos::where('estatus', '=', 'AUTORIZADO')
+                ->where('prestamos.debe', '>', 0)
+                ->where('prestamos.compara_pago', 1)
+                ->update(['compara_pago' => 0]);
+
             $normalizarNombre = function ($nombre) {
                 $nombre = preg_replace('/\s+/', '', $nombre); // eliminar espacios
                 $nombre = strtr(
@@ -677,7 +683,6 @@ class PagosPrestamosController extends Controller
                     $contador++; // Incrementa el contador
                     continue; // Salta este ciclo y pasa al siguiente registro
                 }
-
                 $rowData = [];
                 foreach ($row->getCellIterator() as $cell) {
                     $rowData['rfc'] = $worksheet->getCell('C' . $contador)->getValue();
@@ -686,7 +691,6 @@ class PagosPrestamosController extends Controller
                     $rowData['serie_final'] = $worksheet->getCell('F' . $contador)->getValue();
                     $rowData['importe'] = $worksheet->getCell('H' . $contador)->getValue();
                 }
-
                 $rfcList[] = $rowData['rfc'];
                 $importeList[] = $rowData['importe'];
                 $allData[] = $rowData;
@@ -698,14 +702,12 @@ class PagosPrestamosController extends Controller
                 ->where('estatus', '=', 'AUTORIZADO')
                 ->where('prestamos.debe', '>', 0)
                 ->get(['prestamos.*', 'socios.id as socios_id', 'socios.nombre_completo', 'socios.rfc']);
-
             foreach ($allData as $data) {
                 $nombreCompleto = $data['nombre_completo'];
                 $importeE = $data['importe'];
                 $serie = $data['serie_pago'];
                 $encontrado = false;
                 $importe  = number_format($importeE / 100, 2);
-
                 // Buscar coincidencias en la base de datos
                 foreach ($allPrestamos as $prestamo) {
                     $pago_quincenal = $prestamo->pago_quincenal;
@@ -722,7 +724,6 @@ class PagosPrestamosController extends Controller
                         break; // Termina el bucle una vez que se ha encontrado una coincidencia
                     }
                 }
-
                 // Registra los datos repetidos
                 if ($encontrado) {
                     //$allSerieRepetida[] = $data;
@@ -786,12 +787,6 @@ class PagosPrestamosController extends Controller
                 // Suma al total
                 $totalImporte += $row->pago_quincenal;
             }
-
-            // RESETEAMOS EL CAMPOR DE COMPARACION compara_pago
-            $prestamosOk = Prestamos::where('estatus', '=', 'AUTORIZADO')
-                ->where('prestamos.debe', '>', 0)
-                ->where('prestamos.compara_pago', 1)
-                ->update(['compara_pago' => 0]);
 
             return response()->json(
                 [
