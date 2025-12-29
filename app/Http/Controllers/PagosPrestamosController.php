@@ -644,7 +644,7 @@ class PagosPrestamosController extends Controller
             // RESETEAMOS EL CAMPOR DE COMPARACION compara_pago
             Prestamos::where('estatus', '=', 'AUTORIZADO')
                 ->where('prestamos.debe', '>', 0)
-                ->where('prestamos.compara_pago', 1)
+                ->where('prestamos.compara_pago','>', 0)
                 ->update(['compara_pago' => 0]);
 
             $normalizarNombre = function ($nombre) {
@@ -697,6 +697,7 @@ class PagosPrestamosController extends Controller
                 $contador++;
             }
 
+            $debug = []; // <-- arreglo para debug
             // ONTENGO TODOS LOS PRÉSTAMOS, PARA OBTENER LOS PRESTAMOS QUE NO ESTÁN EN EL EXCEL
             $allPrestamos = Prestamos::join('socios', 'prestamos.socios_id', '=', 'socios.id')
                 ->where('estatus', '=', 'AUTORIZADO')
@@ -707,11 +708,14 @@ class PagosPrestamosController extends Controller
                 $importeE = $data['importe'];
                 $serie = $data['serie_pago'];
                 $encontrado = false;
-                $importe  = number_format($importeE / 100, 2);
+                //$importe  = number_format($importeE / 100, 2);
+                $importe = round($importeE * 100);
                 // Buscar coincidencias en la base de datos
                 foreach ($allPrestamos as $prestamo) {
                     $pago_quincenal = $prestamo->pago_quincenal;
-                    $pagoQuincenal  = number_format($pago_quincenal / 100, 2);
+                    //$pagoQuincenal  = number_format($pago_quincenal / 100, 2);
+                    $pagoQuincenal = round($prestamo->pago_quincenal * 100);
+
                     if ($normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
                         $pagoQuincenal == $importe &&
                         $prestamo->compara_pago == 0 &&
@@ -719,6 +723,44 @@ class PagosPrestamosController extends Controller
                         // Coincidencia encontrada, actualiza el campo COMPARA_PAGO a 1
                         $prestamo->update([
                             'compara_pago' => 1
+                        ]);
+                        $encontrado = true;
+                        break; // Termina el bucle una vez que se ha encontrado una coincidencia
+                    }
+                    elseif (
+                        $normalizarNombre($prestamo->nombre_completo) === $normalizarNombre($nombreCompleto) &&
+                        fmod($importe, $pagoQuincenal) == 0 && // múltiplo exacto
+                        $prestamo->compara_pago == 0 &&
+                        ($prestamo->serie + 1) == $serie
+                    )  {
+                        // Cuántas series se adelantan
+                        $numeroPagos = intval($importe / $pagoQuincenal);
+
+                        for ($i = 0; $i < $numeroPagos; $i++) {
+                            $serieActual = $prestamo->serie + $i + 1; // serie que se paga
+
+                            // Agregamos al array de series pagadas
+                            $allSerieOk[] = [
+                                'prestamos_id' => $prestamo->id,
+                                'socios_id' => $prestamo->socios_id,
+                                'fecha_pago' => $nuevaFecha,
+                                'fecha_captura' => $hoy,
+                                'serie_pago' => $serieActual,
+                                'serie_final' => $prestamo->total_quincenas,
+                                'rfc' => $prestamo->rfc,
+                                'nombre_completo' => $prestamo->nombre_completo,
+                                'serie' => $serieActual,
+                                'importe' => $pagoQuincenal / 100, // importe por cada serie
+                            ];
+
+                            // Marcamos en BD cada serie individual como pagada
+                            Prestamos::where('id', $prestamo->id)
+                                ->where('serie', $prestamo->serie + $i)
+                                ->update(['compara_pago' => 1]);
+                        }
+
+                        $prestamo->update([
+                            'compara_pago' => $numeroPagos
                         ]);
                         $encontrado = true;
                         break; // Termina el bucle una vez que se ha encontrado una coincidencia
@@ -795,6 +837,7 @@ class PagosPrestamosController extends Controller
                     'serie-no-db' => $allSerieNoDb,
                     'serie-no-excel' => $allSerieNoExcel,
                     'importe_total' => $totalImporte
+                   
                 ]
             );
         }
