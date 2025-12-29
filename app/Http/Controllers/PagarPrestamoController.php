@@ -161,7 +161,11 @@ class PagarPrestamoController extends Controller
             $datosFormulario = $request->all();
             $prestamosIds = [];
             $formaPago = $request->forma_pago;
-            $afectaSaldoSocio = $formaPago !== 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN';
+            //$afectaSaldoSocio = $formaPago !== 'LIQUIDAR PRÉSTAMO - REESTRUCTURACIÓN';
+            $afectaSaldoSocio = !in_array($formaPago, [
+                'LIQUIDAR PRÉSTAMO - REESTRUCTURACIÓN',
+                'LIQUIDAR PRÉSTAMO - PAGO TOTAL'
+            ]);
             //$totalInteresesAdelantados = 0;
 
             $interesesPorPrestamo = [];
@@ -1206,8 +1210,6 @@ class PagarPrestamoController extends Controller
         }
         */
 
-
-
         $prestamo = Prestamos::where('prestamos.socios_id', $id)
             ->where('prestamos.estatus', 'AUTORIZADO')
             ->where('prestamos.prestamo_especial', 0)
@@ -1260,7 +1262,7 @@ class PagarPrestamoController extends Controller
 
         $socio = Socios::findorfail($prestamo[0]->socios_id);
 
-        $tipoValues = ['LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN', 'LIQUIDACIÓN DE PRÉSTAMO - TRASLADO DE AHORRO'];
+        $tipoValues = ['LIQUIDAR PRÉSTAMO - REESTRUCTURACIÓN','LIQUIDAR PRÉSTAMO - PAGO TOTAL', 'LIQUIDAR PRÉSTAMO - TRASLADO DE AHORRO'];
 
         return view('pagar_prestamos.show', compact('prestamo', 'socio','tipoValues'));
 

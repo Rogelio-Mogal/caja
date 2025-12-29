@@ -715,7 +715,7 @@
                 resetMetodoPago();
 
                 // 1️⃣ REESTRUCTURACIÓN → deshabilita traslado
-                if (valor === 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN') {
+                if (valor === 'LIQUIDAR PRÉSTAMO - REESTRUCTURACIÓN' || valor === 'LIQUIDAR PRÉSTAMO - PAGO TOTAL') {
 
                     $metodoPago
                         .find('option[value="TRASLADO DE AHORRO"]')
@@ -723,7 +723,7 @@
                 }
 
                 // 2️⃣ TRASLADO DE AHORRO → solo traslado
-                if (valor === 'LIQUIDACIÓN DE PRÉSTAMO - TRASLADO DE AHORRO') {
+                if (valor === 'LIQUIDAR PRÉSTAMO - TRASLADO DE AHORRO') {
 
                     $metodoPago.find('option').each(function () {
                         if (
