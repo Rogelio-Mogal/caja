@@ -26,6 +26,7 @@ return new class extends Migration
             $table->string('movimiento',100);
             $table->string('tipo_movimiento',40);
             $table->string('metodo_pago',40);
+            $table->nullableMorphs('origen');
             $table->string('estatus',40);
             $table->boolean('activo')->default(1);
             $table->timestamps();
@@ -37,6 +38,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        //Schema::dropIfExists('movimientos');
+
+        DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
         Schema::dropIfExists('movimientos');
+        DB::statement('SET FOREIGN_KEY_CHECKS = 1;');
     }
 };

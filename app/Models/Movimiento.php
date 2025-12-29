@@ -19,6 +19,10 @@ class Movimiento extends Model
         'movimiento',
         'tipo_movimiento',
         'metodo_pago',
+
+        'origen_type',
+        'origen_id',
+
         'estatus',
         'activo',
     ];
@@ -26,5 +30,10 @@ class Movimiento extends Model
     public function socio()
     {
         return $this->belongsTo(Socios::class, 'socios_id');
+    }
+
+    public function origen()
+    {
+        return $this->morphTo();
     }
 }

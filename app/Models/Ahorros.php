@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Model;
 
 class Ahorros extends Model
@@ -23,5 +24,10 @@ class Ahorros extends Model
     public function socio()
     {
         return $this->belongsTo(Socios::class, 'socios_id');
+    }
+
+    public function movimientos(): MorphMany
+    {
+        return $this->morphMany(Movimiento::class, 'origen');
     }
 }

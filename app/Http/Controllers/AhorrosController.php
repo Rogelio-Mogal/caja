@@ -81,7 +81,7 @@ class AhorrosController extends Controller
 
             $nextId = $lastInsertedId + 1;
 
-            Movimiento::create([
+            /*Movimiento::create([
                 'socios_id' => $socio->id,
                 'fecha' => Carbon::now(),
                 'folio' => 'MOV-' . $nextId,
@@ -91,6 +91,21 @@ class AhorrosController extends Controller
                 //'movimiento' => 'AHORRO VOLUNTARIO',
                 'movimiento' => $ahorro->is_aportacion ? 'APORTACIÓN SOCIAL' : 'AHORRO VOLUNTARIO',
                 'tipo_movimiento' => 'ABONO', //cargo-abono
+                'metodo_pago' => $request->input('metodo_pago'),
+                'estatus' => 'EFECTUADO',
+            ]);*/
+
+            $ahorro->movimientos()->create([
+                'socios_id' => $socio->id,
+                'fecha' => now(),
+                'folio' => 'MOV-' . $nextId,
+                'saldo_anterior' => $saldoAnteriro,
+                'saldo_actual' => $socio->saldo,
+                'monto' => $ahorro->monto,
+                'movimiento' => $ahorro->is_aportacion
+                    ? 'APORTACIÓN SOCIAL'
+                    : 'AHORRO VOLUNTARIO',
+                'tipo_movimiento' => 'ABONO',
                 'metodo_pago' => $request->input('metodo_pago'),
                 'estatus' => 'EFECTUADO',
             ]);
@@ -158,7 +173,7 @@ class AhorrosController extends Controller
 
             // INSERTAMOS EN LA TABLA MOVIMIENTOS
             $nextId = Movimiento::max('id') + 1;
-            Movimiento::create([
+            /*Movimiento::create([
                 'socios_id' => $ahorro->socios_id,
                 'fecha' => Carbon::now(),
                 'folio' => 'MOV-' . $nextId,
@@ -169,8 +184,21 @@ class AhorrosController extends Controller
                 'tipo_movimiento' => 'CARGO',
                 'metodo_pago' => 'EFECTIVO',
                 'estatus' => 'CANCELADO',
+            ]);*/
+
+            $ahorro->movimientos()->create([
+                'socios_id' => $ahorro->socios_id,
+                'fecha' => now(),
+                'folio' => 'MOV-' . $nextId,
+                'saldo_anterior' => $saldoAnteriro,
+                'saldo_actual' => $saldoActual,
+                'monto' => $ahorro->monto,
+                'movimiento' => 'AHORRO CANCELADO',
+                'tipo_movimiento' => 'CARGO',
+                'metodo_pago' => 'EFECTIVO',
+                'estatus' => 'CANCELADO',
             ]);
-    
+
 
             DB::commit();
             return json_encode($ahorro->id);
