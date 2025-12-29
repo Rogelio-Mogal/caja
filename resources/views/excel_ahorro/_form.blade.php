@@ -82,6 +82,8 @@
                             <div class="row align-items-center">
                                 <div class="col-lg-12 col-md-12">
                                     <h5 class="card-title">SOCIOS CORRECTOS <span id="total_correcto"></span> </h5>
+                                    <input type="hidden" name="total_aportacion" id="total_aportacion">
+                                    <input type="hidden" name="num_socio" id="num_socio">
                                 </div>
                             </div>
                         </div>
@@ -201,9 +203,12 @@
                 event.preventDefault();
 
                 // Verificar si hay datos en la tabla #tblDB
-                const resultadoOkTable = document.querySelector('#tblDB');
+                const resultadoOkTable = document.querySelectorAll('#tblDB tbody tr');
+                // Filtra las filas que no son "vacías"
+                const filasDatos = Array.from(resultadoOkTable).filter(tr => !tr.classList.contains('dataTables_empty'));
 
-                if (resultadoOkTable && resultadoOkTable.rows.length > 1) {
+                //if (resultadoOkTable && resultadoOkTable.length > 1) {
+                if (filasDatos.length > 1) {
                     // Mostrar la alerta de confirmación
                     Swal.fire({
                         title: 'Hay datos con errores en diferentes campos',
@@ -217,6 +222,33 @@
                             // Si el usuario confirmó, enviar el formulario
                             document.getElementById('form_excel_ahorro').submit();
                             console.log('enviaria el formulario');
+                            $("#submitBtn").attr("disabled", true);
+                        }
+                    });
+                }else {
+                    const montoTotal  = Number($("#total_aportacion").val()) || 0;
+                    const totalSocios = $("#num_socio").val();
+
+                    const montoFormateado = new Intl.NumberFormat('es-MX', {
+                        style: 'currency',
+                        currency: 'MXN'
+                    }).format(montoTotal);
+                    // No hay datos → confirmar envío
+                    Swal.fire({
+                        title: 'Confirmar envío',
+                        html: `
+                            <p><b>Total de socios:</b> ${totalSocios}</p>
+                            <p><b>Monto total:</b> ${montoFormateado}</p>
+                            <br>
+                            <p>¿Deseas continuar?</p>
+                        `,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, enviar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            document.getElementById('form_excel_ahorro').submit();
                             $("#submitBtn").attr("disabled", true);
                         }
                     });
@@ -479,6 +511,10 @@
 
                                 // Aquí accedes al total
                                 const montoTotal = responseData.monto_total;
+                                const totalSocios = responseData.total_socios;
+
+                                $("#total_aportacion").val(montoTotal);
+                                $("#num_socio").val(totalSocios);
 
                                 // Verifica si la respuesta tiene la clave "data"
                                 if (responseData.hasOwnProperty('data')) {

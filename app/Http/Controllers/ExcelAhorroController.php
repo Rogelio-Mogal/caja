@@ -51,14 +51,14 @@ class ExcelAhorroController extends Controller
             foreach ($registrosOrigen as $registro) {
                 $nextId = $lastInsertedId + 1;
                 $saldoAnteriro = $registro->saldo;
-                $saldoActual = $registro->saldo + 200;
+                $saldoActual = $registro->saldo + $registro->inscripcion;
                 $movimiento = Movimiento::create([
                     'socios_id' => $registro->id,
                     'fecha' => Carbon::now(),
                     'folio' => 'MOV-' . $nextId,
                     'saldo_anterior' => $saldoAnteriro,
                     'saldo_actual' => $saldoActual,
-                    'monto' => 200,
+                    'monto' => $registro->inscripcion,
                     'movimiento' => 'INGRESO',
                     'tipo_movimiento' => 'ABONO',
                     'metodo_pago' => 'EFECTIVO',
@@ -75,7 +75,7 @@ class ExcelAhorroController extends Controller
 
                 if ($socio) {
                     $socio->update([
-                        'saldo' => $socio->saldo + 200,
+                        'saldo' => $socio->saldo + $registro->inscripcion,
                     ]);
                 } else {
                     // Manejar el caso donde no se encontró el socio
@@ -135,16 +135,22 @@ class ExcelAhorroController extends Controller
             $primerRegistro = true;
             $contador = 1;
 
+            $montosPorNombre = [];
             foreach ($worksheet->getRowIterator() as $row) {
                 $rowData = [];
                 foreach ($row->getCellIterator() as $cell) {
                     $rowData[] = $cell->getValue();
                 }
+
+                $nombre = $rowData[3];   // nombre completo
+                $monto  = $rowData[7];   // valor a asignar al campo 'monto'
+                $montosPorNombre[$nombre] = $monto; // guardamos temporalmente por nombre
+
                 $dataDetalle = array(
                     'rfc' => $rowData[2],
                     'nombre_completo' => $rowData[3],
                     'curp' => 'curp-'.$contador,
-                    'cuip' => 'cuip-'.$contador,                    
+                    'cuip' => 'cuip-'.$contador,
                 );
                 $contador++;
 
@@ -154,7 +160,7 @@ class ExcelAhorroController extends Controller
                         DatosTemporales::create($dataDetalle);
                     } else {
                         $primerRegistro = false; // Cambiar el valor después del primer ciclo
-                    } 
+                    }
 
                 } catch (\Illuminate\Database\QueryException $e) {
                     // Verificar si el error es de unicidad (por clave duplicada)
@@ -179,7 +185,7 @@ class ExcelAhorroController extends Controller
             //    $nombre = mb_strtolower($nombre); // todo minúscula
             //    return $nombre;
             //};
-            
+
             $normalizarNombre = function ($nombre) {
                 // Quitar espacios
                 $nombre = preg_replace('/\s+/', '', $nombre);
@@ -195,24 +201,22 @@ class ExcelAhorroController extends Controller
                 );
 
                 // Convertir a minúsculas (después de reemplazo)
-                $nombre = mb_strtolower($nombre);
-
-                return $nombre;
+                return mb_strtolower($nombre);
             };
 
             // Reseteamos el campo de temporal_captura de la tabla SOCIOS
-            Socios::query()->update(['temporal_captura' => '']);
+            Socios::query()->update(['temporal_captura' => '', 'inscripcion' => 0]);
 
-        
+
             // Obtener registros de DatosTemporales y Socios
             /*$datosTemporales = DatosTemporales::pluck('nombre_completo')->map(function ($nombre) {
                 return trim($nombre);
             })->toArray();
-            
+
             $socios = Socios::pluck('nombre_completo')->map(function ($nombre) {
                 return trim($nombre);
             })->toArray();
-            
+
 
 
             // Encontrar registros que están en DatosTemporales pero no en Socios
@@ -246,11 +250,20 @@ class ExcelAhorroController extends Controller
             // 4. Actualiza en base a los nombres originales
             DatosTemporales::whereIn('nombre_completo', $originalesNoDB)->update(['temporal_captura' => 'No en DB']);
             Socios::whereIn('nombre_completo', $originalesNoFinanciero)->update(['temporal_captura' => 'No en Financiero']);
-            
+
+            // ------------------------------
+            // 5. Actualizar monto en Socios según temporal_captura y nombre
+            foreach ($montosPorNombre as $nombreOriginal => $monto) {
+                $nombreNormalizado = $normalizarNombre($nombreOriginal);
+
+                Socios::where('nombre_completo', $nombreOriginal)
+                    ->whereIn('temporal_captura', ['', 'No en DB', 'No en Financiero'])
+                    ->update(['inscripcion' => $monto]);
+            }
 
             return response()->json('success');
         }
-    
+
         return response()->json(['error' => 'No se ha proporcionado ningún archivo.']);
 
     }
@@ -271,7 +284,7 @@ class ExcelAhorroController extends Controller
         $socios = Socios::where('temporal_captura', '=', 'No en Financiero')
         //whereNotNull('temporal_captura')
         ->get();
-        
+
         $resultadoFinal = [
             'data' => $socios
         ];
@@ -285,8 +298,8 @@ class ExcelAhorroController extends Controller
             ->get();
 
         $totalSocios = $socios->count(); // Total de registros
-        $montoTotal = $totalSocios * 200; // Multiplicación
-        
+        $montoTotal = $socios->sum('inscripcion'); //$totalSocios * 200; // Multiplicación
+
         $resultadoFinal = [
             'data' => $socios,
             'total_socios' => $totalSocios,

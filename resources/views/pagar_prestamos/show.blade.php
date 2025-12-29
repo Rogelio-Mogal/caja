@@ -372,7 +372,6 @@
             return min;
         }
 
-
         function esSeleccionValida(group) {
             let series = [];
 
@@ -598,6 +597,7 @@
 
             // VALIDAR ANTES DE ENVIAR EL FORMULARIO
             $('#form_pagar_prestamos').on('submit', function(e) {
+                e.preventDefault();
                 // VALIDACIÓN: series consecutivas
                 if (haySeleccionInvalida()) {
                     Swal.fire({
@@ -605,8 +605,6 @@
                         title: 'Selección inválida',
                         text: 'Debe seleccionar los pagos desde la primera serie pendiente y en orden consecutivo.'
                     });
-
-                    e.preventDefault();
                     return;
                 }
 
@@ -649,8 +647,6 @@
                         title: 'Saldo insuficiente',
                         text: 'Para la liquidación por traslado de ahorro, el saldo no puede ser menor al monto adeudado.',
                     });
-
-                    e.preventDefault();
                     return;
                 }
 
@@ -661,7 +657,7 @@
                         title: 'Mensaje de error.',
                         text: 'Por favor ingrese la fecha del último descuento.',
                     });
-                    e.preventDefault(); // Evita el envío del formulario
+                    return;
                 }
 
                 if(formapago == -1){
@@ -671,7 +667,7 @@
                         title: 'Mensaje de error.',
                         text: 'Por favor seleccione una forma de pago.',
                     });
-                    e.preventDefault(); // Evita el envío del formulario
+                   return;
                 }
 
                 if(metodopago == -1){
@@ -681,8 +677,47 @@
                         title: 'Mensaje de error.',
                         text: 'Por favor seleccione un método de pago.',
                     });
-                    e.preventDefault(); // Evita el envío del formulario
+                    return;
                 }
+
+                // ✅ SI TODO ESTÁ BIEN → CONFIRMAR ENVÍO
+                const montoFormateado = new Intl.NumberFormat('es-MX', {
+                        style: 'currency',
+                        currency: 'MXN'
+                    }).format(debe);
+
+                const fechaDesk = $('#fecha_ultimo_descuento').val();
+                function formatearFecha(fecha) {
+                    const partes = fecha.split('-'); // yyyy-mm-dd
+                    return `${partes[2]}-${partes[1]}-${partes[0]}`; // dd-mm-yyyy
+                }
+
+                const fechaFormateada = formatearFecha(fechaDesk);
+
+                Swal.fire({
+                    title: 'Confirmar operación',
+                    html: `
+                        <p>
+                            <b style="font-size: 22px; font-weight: bold;">ÚLTIMO DESCUENTO:</b>
+                            <span style="font-size: 22px; font-weight: bold;">
+                                ${fechaFormateada}
+                            </span>
+                        </p>
+                        <p><b>Monto a saldar:</b> ${montoFormateado}</p>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, pagar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // 🔥 ENVIAR FORMULARIO
+                        this.submit();
+
+                        // Opcional: bloquear botón
+                        $('#submitBtn').prop('disabled', true);
+                    }
+                });
             });
 
             //SELECT2

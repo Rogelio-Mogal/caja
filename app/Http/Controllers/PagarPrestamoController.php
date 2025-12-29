@@ -510,8 +510,6 @@ class PagarPrestamoController extends Controller
         return true; // ✅ préstamo totalmente liquidado
     }
 
-
-
     private function verificarFinPrestamoNO($prestamoId): bool
     {
         $prestamo = Prestamos::find($prestamoId);
