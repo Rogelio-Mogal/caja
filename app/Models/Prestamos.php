@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Model;
 
 class Prestamos extends Model
@@ -83,5 +84,10 @@ class Prestamos extends Model
         return $this->hasOne(PagosPrestamos::class, 'prestamos_id')
             ->where('pagado', 1)
             ->orderByDesc('serie_pago');
+    }
+
+    public function movimientos(): MorphMany
+    {
+        return $this->morphMany(Movimiento::class, 'origen');
     }
 }

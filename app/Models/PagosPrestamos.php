@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Model;
 
 class PagosPrestamos extends Model
@@ -38,5 +39,8 @@ class PagosPrestamos extends Model
     {
         return $this->belongsTo(Prestamos::class, 'prestamos_id');
     }
-
+    public function movimientos(): MorphMany
+    {
+        return $this->morphMany(Movimiento::class, 'origen');
+    }
 }

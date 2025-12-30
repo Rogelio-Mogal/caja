@@ -253,7 +253,7 @@ class PagarPrestamoController extends Controller
                             // Actualizar socio aval
                             $aval = Socios::find($row->socios_id);
                             $lastId = Movimiento::max('id') ?? 0;
-                            Movimiento::create([
+                            /*Movimiento::create([
                                 'socios_id'       => $row->socios_id,
                                 'fecha'           => now(),
                                 'folio'           => 'MOV-' . ($lastId + 1),
@@ -264,7 +264,25 @@ class PagarPrestamoController extends Controller
                                 'tipo_movimiento' => 'ABONO',
                                 'metodo_pago'     => 'EFECTIVO',
                                 'estatus'         => 'EFECTUADO',
+                            ]);*/
+
+                            $movimiento = $prestamo->movimientos()->create([
+                                'socios_id'       => $row->socios_id,
+                                'fecha'           => now(),
+                                'folio'           => 'MOV-',
+                                'saldo_anterior'  => $aval->saldo,
+                                'saldo_actual'    => $aval->saldo,
+                                'monto'           => $abonoReal,
+                                'movimiento'      => 'PAGO PRÉSTAMO (AVAL)',
+                                'tipo_movimiento' => 'ABONO',
+                                'metodo_pago'     => 'EFECTIVO',
+                                'estatus'         => 'EFECTUADO',
                             ]);
+
+                            $movimiento->update([
+                                'folio' => 'MOV-' . $movimiento->id,
+                            ]);
+
                             $aval->decrement('monto_prestamos', $abonoReal);
 
                             // Actualizar detalle aval
@@ -299,8 +317,8 @@ class PagarPrestamoController extends Controller
 
                             // Movimiento del socio
                             $socio = Socios::find($prestamo->socios_id);
-                            $lastId = Movimiento::max('id') ?? 0;
-                            Movimiento::create([
+                            //$lastId = Movimiento::max('id') ?? 0;
+                            /*Movimiento::create([
                                 'socios_id'       => $prestamo->socios_id,
                                 'fecha'           => now(),
                                 'folio'           => 'MOV-' . ($lastId + 1),
@@ -311,6 +329,23 @@ class PagarPrestamoController extends Controller
                                 'tipo_movimiento' => 'ABONO',
                                 'metodo_pago'     => 'EFECTIVO',
                                 'estatus'         => 'EFECTUADO',
+                            ]);*/
+
+                            $movimiento = $prestamo->movimientos()->create([
+                                'socios_id'       => $socio->id,
+                                'fecha'           => now(),
+                                'folio'           => 'MOV-',
+                                'saldo_anterior'  => $socio->saldo,
+                                'saldo_actual'    => $socio->saldo - ($capitalRestante + $interes),
+                                'monto'           => $capitalRestante + $interes,
+                                'movimiento'      => 'PAGO PRÉSTAMO',
+                                'tipo_movimiento' => 'ABONO',
+                                'metodo_pago'     => 'EFECTIVO',
+                                'estatus'         => 'EFECTUADO',
+                            ]);
+
+                            $movimiento->update([
+                                'folio' => 'MOV-' . $movimiento->id,
                             ]);
 
                             $socio->decrement('monto_prestamos', $capitalRestante);
@@ -343,7 +378,7 @@ class PagarPrestamoController extends Controller
                         if ($afectaSaldoSocio) {
                             $saldoActual = $socio->saldo - $abonoReal;
                         }
-                        Movimiento::create([
+                        /*Movimiento::create([
                             'socios_id'       => $prestamo->socios_id,
                             'fecha'           => now(),
                             'folio'           => 'MOV-' . ($lastId + 1),
@@ -354,7 +389,25 @@ class PagarPrestamoController extends Controller
                             'tipo_movimiento' => 'ABONO',
                             'metodo_pago'     => 'EFECTIVO',
                             'estatus'         => 'EFECTUADO',
+                        ]);*/
+
+                        $movimiento = $prestamo->movimientos()->create([
+                            'socios_id'       => $socio->id,
+                            'fecha'           => now(),
+                            'folio'           => 'MOV-',
+                            'saldo_anterior'  => $socio->saldo,
+                            'saldo_actual'    => $saldoActual,
+                            'monto'           => $abonoReal,
+                            'movimiento'      => 'PAGO PRÉSTAMO',
+                            'tipo_movimiento' => 'ABONO',
+                            'metodo_pago'     => 'EFECTIVO',
+                            'estatus'         => 'EFECTUADO',
                         ]);
+
+                        $movimiento->update([
+                            'folio' => 'MOV-' . $movimiento->id,
+                        ]);
+
                         $socio->decrement('monto_prestamos', $abonoReal);
 
                         //VALIDA SI ES POR PAGO CON SALDO DEL SOCIO 'LIQUIDACIÓN DE PRÉSTAMO - REESTRUCTURACIÓN',
@@ -384,7 +437,7 @@ class PagarPrestamoController extends Controller
                     $prestamo->decrement('debe', $interesCondonado);
 
                     // 🔹 Movimiento contable (NO afecta saldo)
-                    Movimiento::create([
+                    /*Movimiento::create([
                         'socios_id'       => $prestamo->socios_id,
                         'fecha'           => now(),
                         'folio'           => 'MOV-' . ($lastId + 1),
@@ -395,6 +448,23 @@ class PagarPrestamoController extends Controller
                         'tipo_movimiento' => 'AJUSTE',
                         'metodo_pago'     => 'SISTEMA',
                         'estatus'         => 'EFECTUADO',
+                    ]);*/
+
+                    $movimiento = $prestamo->movimientos()->create([
+                        'socios_id'       => $prestamo->socios_id,
+                        'fecha'           => now(),
+                        'folio'           => 'MOV-',
+                        'saldo_anterior'  => $socio->saldo,
+                        'saldo_actual'    => $socio->saldo,
+                        'monto'           => $interesCondonado,
+                        'movimiento'      => 'CONDONACIÓN DE INTERESES POR ADELANTO',
+                        'tipo_movimiento' => 'AJUSTE',
+                        'metodo_pago'     => 'SISTEMA',
+                        'estatus'         => 'EFECTUADO',
+                    ]);
+
+                    $movimiento->update([
+                        'folio' => 'MOV-' . $movimiento->id,
                     ]);
                 }
 
