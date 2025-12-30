@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Model;
 
 class Socios extends Model
@@ -110,5 +111,10 @@ class Socios extends Model
     public function ahorros()
     {
         return $this->hasMany(Ahorros::class, 'socios_id');
+    }
+
+    public function movimientos(): MorphMany
+    {
+        return $this->morphMany(Movimiento::class, 'origen');
     }
 }

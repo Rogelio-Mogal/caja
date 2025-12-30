@@ -44,18 +44,15 @@ class ExcelAhorroController extends Controller
             ->orWhere('temporal_captura', '=', '')
             ->get();
 
-            // Obtener el último ID insertado en la tabla de movimientos
-            $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
-
             // Inserta los registros en la tabla movimientos
             foreach ($registrosOrigen as $registro) {
-                $nextId = $lastInsertedId + 1;
                 $saldoAnteriro = $registro->saldo;
                 $saldoActual = $registro->saldo + $registro->inscripcion;
-                $movimiento = Movimiento::create([
+
+                $movimiento = $registro->movimientos()->create([
                     'socios_id' => $registro->id,
-                    'fecha' => Carbon::now(),
-                    'folio' => 'MOV-' . $nextId,
+                    'fecha' => now(),
+                    'folio' => 'MOV-',
                     'saldo_anterior' => $saldoAnteriro,
                     'saldo_actual' => $saldoActual,
                     'monto' => $registro->inscripcion,
@@ -65,22 +62,13 @@ class ExcelAhorroController extends Controller
                     'estatus' => 'EFECTUADO',
                 ]);
 
-                // Incrementar el último ID insertado
-                $lastInsertedId = $nextId;
+                 $movimiento->update([
+                    'folio' => 'MOV-' . $movimiento->id,
+                ]);
 
-                // ACTUALIZAMOS EL MONTO DE LA TABLA socios
-                $socio = Socios::where('id','=' , $movimiento->socios_id )
-                ->get()
-                ->first();
-
-                if ($socio) {
-                    $socio->update([
-                        'saldo' => $socio->saldo + $registro->inscripcion,
-                    ]);
-                } else {
-                    // Manejar el caso donde no se encontró el socio
-                    //throw new Exception("Socio con ID {$movimiento->socio_id} no encontrado.");
-                }
+                $registro->update([
+                    'saldo' => $saldoActual,
+                ]);
             }
 
             \DB::commit();
