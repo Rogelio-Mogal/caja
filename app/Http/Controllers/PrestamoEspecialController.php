@@ -35,7 +35,6 @@ class PrestamoEspecialController extends Controller
         //
     }
 
-
     public function create()
     {
         $prestamo = new Prestamos;
@@ -121,7 +120,7 @@ class PrestamoEspecialController extends Controller
             $saldoAnteriro = ($socio->saldo - $montoPrestamo) + $montoPrestamo;
             $saldoActual = $saldoAnteriro - $saldoSocio;
 
-            Movimiento::create([
+            /*Movimiento::create([
                 'socios_id' => $request->input('socios_id'),
                 'fecha' => Carbon::now(),
                 'folio' => 'MOV-' . $nextId,
@@ -132,6 +131,23 @@ class PrestamoEspecialController extends Controller
                 'tipo_movimiento' => 'CARGO',
                 'metodo_pago' => 'POR DEFINIR',
                 'estatus' => 'PRE-AUTORIZADO',
+            ]);*/
+
+            $movSocio = $prestamo->movimientos()->create([
+                'socios_id'       => $request->input('socios_id'),
+                'fecha'           => Carbon::now(),
+                'folio'           => 'MOV-',
+                'saldo_anterior'  => $saldoAnteriro,
+                'saldo_actual'    => $saldoActual,
+                'monto'           => $saldoSocio,
+                'movimiento'      => 'PRESTAMO PRE AUTORIZADO. '. $request->input('concepto'),
+                'tipo_movimiento' => 'CARGO',
+                'metodo_pago'     => 'POR DEFINIR',
+                'estatus'         => 'PRE-AUTORIZADO',
+            ]);
+
+            $movSocio->update([
+                'folio' => 'MOV-' . $movSocio->id,
             ]);
 
             \DB::commit();

@@ -103,7 +103,7 @@ class PrestamoEnfermedadController extends Controller
             $saldoAnteriro = ($socio->saldo - $montoPrestamo) + $montoPrestamo;
             $saldoActual = $saldoAnteriro - $saldoSocio;
 
-            Movimiento::create([
+            /*Movimiento::create([
                 'socios_id' => $request->input('socios_id'),
                 'fecha' => Carbon::now(),
                 'folio' => 'MOV-' . $nextId,
@@ -114,6 +114,23 @@ class PrestamoEnfermedadController extends Controller
                 'tipo_movimiento' => 'CARGO',
                 'metodo_pago' => 'POR DEFINIR',
                 'estatus' => 'PRE-AUTORIZADO',
+            ]);*/
+
+            $movSocio = $prestamo->movimientos()->create([
+                'socios_id'       => $request->input('socios_id'),
+                'fecha'           => Carbon::now(),
+                'folio'           => 'MOV-',
+                'saldo_anterior'  => $saldoAnteriro,
+                'saldo_actual'    => $saldoActual,
+                'monto'           => $saldoSocio,
+                'movimiento'      => 'PRESTAMO PRE AUTORIZADO',
+                'tipo_movimiento' => 'CARGO',
+                'metodo_pago'     => 'POR DEFINIR',
+                'estatus'         => 'PRE-AUTORIZADO',
+            ]);
+
+            $movSocio->update([
+                'folio' => 'MOV-' . $movSocio->id,
             ]);
 
 
@@ -160,7 +177,7 @@ class PrestamoEnfermedadController extends Controller
                     if ( $request->input('apoyo_adicional') == 1 ){
                         $movimiento = 'PRESTAMO PRE AUTORIZADO AVAL. (APOYO ADICIONAL)';
                     }
-                    Movimiento::create([
+                    /*Movimiento::create([
                         'socios_id' => $request->idAval[$key],
                         'fecha' => Carbon::now(),
                         'folio' => 'MOV-' . $nextId,
@@ -171,7 +188,25 @@ class PrestamoEnfermedadController extends Controller
                         'tipo_movimiento' => 'CARGO',
                         'metodo_pago' => 'POR DEFINIR',
                         'estatus' => 'PRE-AUTORIZADO',
+                    ]);*/
+
+                    $movAval = $prestamo->movimientos()->create([
+                        'socios_id'       => $request->idAval[$key],
+                        'fecha'           => Carbon::now(),
+                        'folio'           => 'MOV-',
+                        'saldo_anterior'  => $saldoAnteriroAval,
+                        'saldo_actual'    => $saldoActualAval,
+                        'monto'           => $request->saldo_aval[$key],
+                        'movimiento'      => $movimiento,
+                        'tipo_movimiento' => 'CARGO',
+                        'metodo_pago'     => 'POR DEFINIR',
+                        'estatus'         => 'PRE-AUTORIZADO',
                     ]);
+
+                    $movAval->update([
+                        'folio' => 'MOV-' . $movAval->id,
+                    ]);
+
                 }
             }
 
@@ -179,7 +214,7 @@ class PrestamoEnfermedadController extends Controller
             return redirect()->route('admin.prestamos.index')->with(['id' => $id]);
         } catch (Exception $e) {
             \DB::rollback();
-            dd($e);
+            //dd($e);
             $query = $e->getMessage();
             return json_encode($query);
             return redirect()->back()

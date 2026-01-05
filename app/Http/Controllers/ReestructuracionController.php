@@ -76,7 +76,7 @@ class ReestructuracionController extends Controller
                         'numero_prestamos' => $socio->numero_prestamos - 1,
                     ]);
 
-                    Movimiento::create([
+                    /*Movimiento::create([
                         'socios_id' => $socio->id,
                         'fecha' => Carbon::now(),
                         'folio' => 'MOV-' . $nextId,
@@ -87,7 +87,25 @@ class ReestructuracionController extends Controller
                         'tipo_movimiento' => 'ABONO',
                         'metodo_pago' => 'EFECTIVO',
                         'estatus' => 'AUTORIZADO',
+                    ]);*/
+
+                    $movSocio = $prestamo->movimientos()->create([
+                        'socios_id'       => $socio->id,
+                        'fecha'           => Carbon::now(),
+                        'folio'           => 'MOV-',
+                        'saldo_anterior'  => $saldoAnteriro,
+                        'saldo_actual'    => $saldoAnteriro,
+                        'monto'           => $prestamo->diferencia,
+                        'movimiento'      => 'ABONO PRESTAMO. '. $prestamo->id, // AGREGAR UN CAMPO DE FOLIO
+                        'tipo_movimiento' => 'ABONO',
+                        'metodo_pago'     => 'EFECTIVO',
+                        'estatus'         => 'AUTORIZADO',
                     ]);
+
+                    $movSocio->update([
+                        'folio' => 'MOV-' . $movSocio->id,
+                    ]);
+
                 }
 
                 // MOVIMIENTOS PARA EL AVAL
@@ -109,7 +127,7 @@ class ReestructuracionController extends Controller
                             ]);
                         }
 
-                        Movimiento::create([
+                        /*Movimiento::create([
                             'socios_id' => $aval->id,
                             'fecha' => Carbon::now(),
                             'folio' => 'MOV-' . $nextId,
@@ -120,7 +138,25 @@ class ReestructuracionController extends Controller
                             'tipo_movimiento' => 'ABONO',
                             'metodo_pago' => 'EFECTIVO',
                             'estatus' => 'AUTORIZADO',
+                        ]);*/
+
+                        $movAval = $prestamo->movimientos()->create([
+                            'socios_id'       => $aval->id,
+                            'fecha'           => Carbon::now(),
+                            'folio'           => 'MOV-',
+                            'saldo_anterior'  => $saldoAnteriro,
+                            'saldo_actual'    => $saldoAnteriro,
+                            'monto'           => $row->monto_aval,
+                            'movimiento'      => 'ABONO PRESTAMO. '. $prestamo->id,
+                            'tipo_movimiento' => 'ABONO',
+                            'metodo_pago'     => 'EFECTIVO',
+                            'estatus'         => 'AUTORIZADO',
                         ]);
+
+                        $movAval->update([
+                            'folio' => 'MOV-' . $movAval->id,
+                        ]);
+
                     }
                 }
             }
@@ -129,7 +165,7 @@ class ReestructuracionController extends Controller
             //dd('si lo envio');
         } catch (Exception $e) {
             \DB::rollback();
-            dd($e);
+            //dd($e);
             $query = $e->getMessage();
             return json_encode($query);
             return redirect()->back()

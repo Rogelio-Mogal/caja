@@ -25,4 +25,9 @@ class Retiro extends Model
     {
         return $this->belongsTo(Socios::class, 'socios_id');
     }
+
+    public function movimientos(): MorphMany
+    {
+        return $this->morphMany(Movimiento::class, 'origen');
+    }
 }

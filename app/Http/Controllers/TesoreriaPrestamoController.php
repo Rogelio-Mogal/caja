@@ -112,7 +112,7 @@ class TesoreriaPrestamoController extends Controller
             }
 
             // INSERTAMOS EN LA TABLA MOVIMIENTOS
-            $nextId = Movimiento::max('id') + 1;
+            /*$nextId = Movimiento::max('id') + 1;
             Movimiento::create([
                 'socios_id' => $prestamo->socios_id,
                 'fecha' => Carbon::now(),
@@ -124,6 +124,23 @@ class TesoreriaPrestamoController extends Controller
                 'tipo_movimiento' => 'CARGO',
                 'metodo_pago' => $prestamo->metodo_pago,
                 'estatus' => 'AUTORIZADO',
+            ]);*/
+
+            $movSocio = $prestamo->movimientos()->create([
+                'socios_id'       => $prestamo->socios_id,
+                'fecha'           => Carbon::now(),
+                'folio'           => 'MOV-',
+                'saldo_anterior'  => $saldoAnteriro,
+                'saldo_actual'    => $saldoActual,
+                'monto'           => $prestamo->diferencia,
+                'movimiento'      => 'PRESTAMO AUTORIZADO',
+                'tipo_movimiento' => 'CARGO',
+                'metodo_pago'     => $prestamo->metodo_pago,
+                'estatus'         => 'AUTORIZADO',
+            ]);
+
+            $movSocio->update([
+                'folio' => 'MOV-' . $movSocio->id,
             ]);
 
             // MOVIMIENTOS PARA EL AVAL
@@ -150,7 +167,7 @@ class TesoreriaPrestamoController extends Controller
                     ]);
 
                     // INSERTAMOS EN LA TABLA MOVIMIENTOS, AVALES
-                    $nextId = Movimiento::max('id') + 1;
+                    /*$nextId = Movimiento::max('id') + 1;
                     Movimiento::create([
                         'socios_id' => $aval->id,
                         'fecha' => Carbon::now(),
@@ -162,7 +179,25 @@ class TesoreriaPrestamoController extends Controller
                         'tipo_movimiento' => 'CARGO',
                         'metodo_pago' => $prestamo->metodo_pago,
                         'estatus' => 'AUTORIZADO',
+                    ]);*/
+
+                    $movAval = $prestamo->movimientos()->create([
+                        'socios_id'       => $aval->id,
+                        'fecha'           => Carbon::now(),
+                        'folio'           => 'MOV-',
+                        'saldo_anterior'  => $saldoAnteriroAval,
+                        'saldo_actual'    => $saldoActualAval,
+                        'monto'           => $row->monto_aval,
+                        'movimiento'      => 'PRESTAMO AUTORIZADO AVAL',
+                        'tipo_movimiento' => 'CARGO',
+                        'metodo_pago'     => $prestamo->metodo_pago,
+                        'estatus'         => 'AUTORIZADO',
                     ]);
+
+                    $movAval->update([
+                        'folio' => 'MOV-' . $movAval->id,
+                    ]);
+
                 }
             }
 
@@ -229,7 +264,7 @@ class TesoreriaPrestamoController extends Controller
             
 
                 // INSERTAMOS EN LA TABLA MOVIMIENTOS
-                $nextId = Movimiento::max('id') + 1;
+                /*$nextId = Movimiento::max('id') + 1;
                 Movimiento::create([
                     'socios_id' => $prestamo->socios_id,
                     'fecha' => Carbon::now(),
@@ -241,11 +276,29 @@ class TesoreriaPrestamoController extends Controller
                     'tipo_movimiento' => 'ABONO',
                     'metodo_pago' => 'EFECTIVO',
                     'estatus' => 'CANCELADO',
+                ]);*/
+
+                $movSocio = $prestamo->movimientos()->create([
+                    'socios_id'       => $prestamo->socios_id,
+                    'fecha'           => Carbon::now(),
+                    'folio'           => 'MOV-',
+                    'saldo_anterior'  => $saldoAnteriro,
+                    'saldo_actual'    => $saldoActual,
+                    'monto'           => $montoDevuelto,
+                    'movimiento'      => 'PRESTAMO CANCELADO',
+                    'tipo_movimiento' => 'ABONO',
+                    'metodo_pago'     => 'EFECTIVO',
+                    'estatus'         => 'CANCELADO',
                 ]);
+
+                $movSocio->update([
+                    'folio' => 'MOV-' . $movSocio->id,
+                ]);
+
             }else if($prestamo->prestamo_especial == 1){
                 $socio = Socios::findorfail($prestamo->socios_id);
                 // INSERTAMOS EN LA TABLA MOVIMIENTOS
-                $nextId = Movimiento::max('id') + 1;
+                /*$nextId = Movimiento::max('id') + 1;
                 Movimiento::create([
                     'socios_id' => $prestamo->socios_id,
                     'fecha' => Carbon::now(),
@@ -257,6 +310,23 @@ class TesoreriaPrestamoController extends Controller
                     'tipo_movimiento' => 'ABONO',
                     'metodo_pago' => 'EFECTIVO',
                     'estatus' => 'CANCELADO',
+                ]);*/
+
+                $movSocioE = $prestamo->movimientos()->create([
+                    'socios_id'       => $prestamo->socios_id,
+                    'fecha'           => Carbon::now(),
+                    'folio'           => 'MOV-',
+                    'saldo_anterior'  => $socio->saldo - ($socio->monto_prestamos),
+                    'saldo_actual'    => $socio->saldo - ($socio->monto_prestamos),
+                    'monto'           => 0,
+                    'movimiento'      => 'PRESTAMO CANCELADO',
+                    'tipo_movimiento' => 'ABONO',
+                    'metodo_pago'     => 'EFECTIVO',
+                    'estatus'         => 'CANCELADO',
+                ]);
+
+                $movSocioE->update([
+                    'folio' => 'MOV-' . $movSocioE->id,
                 ]);
             }
 
@@ -273,7 +343,7 @@ class TesoreriaPrestamoController extends Controller
                     //    'is_aval' => $aval->is_aval - 1,
                     //]);
                     // INSERTAMOS EN LA TABLA MOVIMIENTOS, AVALES
-                    $nextId = Movimiento::max('id') + 1;
+                    /*$nextId = Movimiento::max('id') + 1;
                     Movimiento::create([
                         'socios_id' => $aval->id,
                         'fecha' => Carbon::now(),
@@ -285,7 +355,25 @@ class TesoreriaPrestamoController extends Controller
                         'tipo_movimiento' => 'ABONO',
                         'metodo_pago' => 'EFECTIVO',
                         'estatus' => 'CANCELADO',
+                    ]);*/
+
+                    $movAval = $prestamo->movimientos()->create([
+                        'socios_id'       => $aval->id,
+                        'fecha'           => Carbon::now(),
+                        'folio'           => 'MOV-',
+                        'saldo_anterior'  => $saldoAnteriroAval,
+                        'saldo_actual'    => $saldoActualAval,
+                        'monto'           => $row->monto_aval,
+                        'movimiento'      => 'PRESTAMO CANCELADO AVAL',
+                        'tipo_movimiento' => 'ABONO',
+                        'metodo_pago'     => 'EFECTIVO',
+                        'estatus'         => 'CANCELADO',
                     ]);
+
+                    $movAval->update([
+                        'folio' => 'MOV-' . $movAval->id,
+                    ]);
+
                 }
             }
 

@@ -68,7 +68,7 @@ class TesoreriaRetiroController extends Controller
             $retiro->save();
 
             // INSERTAMOS EN LA TABLA MOVIMIENTOS
-            $nextId = Movimiento::max('id') + 1;
+            /*$nextId = Movimiento::max('id') + 1;
             Movimiento::create([
                 'socios_id' => $retiro->socios_id,
                 'fecha' => Carbon::now(),
@@ -80,6 +80,23 @@ class TesoreriaRetiroController extends Controller
                 'tipo_movimiento' => 'CARGO',
                 'metodo_pago' => $retiro->forma_pago,
                 'estatus' => 'AUTORIZADO',
+            ]);*/
+
+            $movSocio = $retiro->movimientos()->create([
+                'socios_id'       => $retiro->socios_id,
+                'fecha'           => Carbon::now(),
+                'folio'           => 'MOV-',
+                'saldo_anterior'  => $saldoAnteriro,
+                'saldo_actual'    => $saldoActual,
+                'monto'           => $retiro->saldo_aprobado,
+                'movimiento'      => 'RETIRO',
+                'tipo_movimiento' => 'CARGO',
+                'metodo_pago'     => $retiro->forma_pago,
+                'estatus'         => 'AUTORIZADO',
+            ]);
+
+            $movSocio->update([
+                'folio' => 'MOV-' . $movSocio->id,
             ]);
 
             DB::commit();
@@ -135,7 +152,7 @@ class TesoreriaRetiroController extends Controller
             $socio->update(['saldo' => $socio->saldo + $retiro->monto_retiro]);
 
             // INSERTAMOS EN LA TABLA MOVIMIENTOS
-            $nextId = Movimiento::max('id') + 1;
+            /*$nextId = Movimiento::max('id') + 1;
             Movimiento::create([
                 'socios_id' => $retiro->socios_id,
                 'fecha' => Carbon::now(),
@@ -147,6 +164,23 @@ class TesoreriaRetiroController extends Controller
                 'tipo_movimiento' => 'ABONO',
                 'metodo_pago' => 'EFECTIVO',
                 'estatus' => 'CANCELADO',
+            ]);*/
+
+            $movSocio = $retiro->movimientos()->create([
+                'socios_id'       => $retiro->socios_id,
+                'fecha'           => Carbon::now(),
+                'folio'           => 'MOV-',
+                'saldo_anterior'  => $saldoAnteriro,
+                'saldo_actual'    => $saldoActual,
+                'monto'           => $retiro->monto_retiro,
+                'movimiento'      => 'RETIRO',
+                'tipo_movimiento' => 'ABONO',
+                'metodo_pago'     => 'EFECTIVO',
+                'estatus'         => 'CANCELADO',
+            ]);
+
+            $movSocio->update([
+                'folio' => 'MOV-' . $movSocio->id,
             ]);
 
             DB::commit();

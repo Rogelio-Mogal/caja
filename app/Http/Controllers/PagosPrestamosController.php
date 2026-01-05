@@ -140,7 +140,7 @@ class PagosPrestamosController extends Controller
                             // INSERTAMOS EL MOVIMIENTO
                             $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
                             $nextId = $lastInsertedId + 1;
-                            Movimiento::create([
+                            /*Movimiento::create([
                                 'socios_id' => $row->socios_id,
                                 'fecha' => Carbon::now(),
                                 'folio' => 'MOV-' . $nextId,
@@ -151,7 +151,26 @@ class PagosPrestamosController extends Controller
                                 'tipo_movimiento' => 'ABONO',
                                 'metodo_pago' => 'EFECTIVO',
                                 'estatus' => 'EFECTUADO',
+                            ]);*/
+
+                            $movimiento = $rowPrestamo->movimientos()->create([
+                                'socios_id'       => $row->socios_id,
+                                'fecha'           => Carbon::now(),
+                                'folio'           => 'MOV-',
+                                'saldo_anterior'  => $aval->saldo,
+                                'saldo_actual'    => $aval->saldo,
+                                'monto'           => $abonoReal,
+                                'movimiento'      => 'PAGO PRÉSTAMO',
+                                'tipo_movimiento' => 'ABONO',
+                                'metodo_pago'     => 'EFECTIVO',
+                                'estatus'         => 'EFECTUADO',
                             ]);
+
+                            // Folio basado en ID real
+                            $movimiento->update([
+                                'folio' => 'MOV-' . $movimiento->id,
+                            ]);
+
 
                             $aval->monto_prestamos = $aval->monto_prestamos - $abonoReal;
                             $aval->save();
@@ -216,7 +235,7 @@ class PagosPrestamosController extends Controller
                                 // INSERTAMOS EL MOVIMIENTO
                                 $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
                                 $nextId = $lastInsertedId + 1;
-                                Movimiento::create([
+                                /*Movimiento::create([
                                     'socios_id' => $request->socios_id[$key],
                                     'fecha' => Carbon::now(),
                                     'folio' => 'MOV-' . $nextId,
@@ -227,7 +246,27 @@ class PagosPrestamosController extends Controller
                                     'tipo_movimiento' => 'ABONO',
                                     'metodo_pago' => 'EFECTIVO',
                                     'estatus' => 'EFECTUADO',
+                                ]);*/
+                                $movimiento = $rowPrestamo->movimientos()->create([
+                                    'socios_id'       => $request->socios_id[$key],
+                                    'fecha'           => Carbon::now(),
+                                    'folio'           => 'MOV-',
+                                    'saldo_anterior'  => $socio->saldo,
+                                    'saldo_actual'    => $socio->saldo,
+                                    'monto'           => $capitalRestante,
+                                    'movimiento'      => 'PAGO PRÉSTAMO',
+                                    'tipo_movimiento' => 'ABONO',
+                                    'metodo_pago'     => 'EFECTIVO',
+                                    'estatus'         => 'EFECTUADO',
                                 ]);
+
+                                // Folio basado en ID real
+                                $movimiento->update([
+                                    'folio' => 'MOV-' . $movimiento->id,
+                                ]);
+
+
+
                                 $socio->monto_prestamos = $socio->monto_prestamos - $capitalRestante;
                                 $socio->save();
                             }
@@ -290,7 +329,7 @@ class PagosPrestamosController extends Controller
                             // INSERTAMOS EL MOVIMIENTO
                             $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
                             $nextId = $lastInsertedId + 1;
-                            Movimiento::create([
+                            /*Movimiento::create([
                                 'socios_id' => $request->socios_id[$key],
                                 'fecha' => Carbon::now(),
                                 'folio' => 'MOV-' . $nextId,
@@ -301,7 +340,26 @@ class PagosPrestamosController extends Controller
                                 'tipo_movimiento' => 'ABONO',
                                 'metodo_pago' => 'EFECTIVO',
                                 'estatus' => 'EFECTUADO',
+                            ]);*/
+
+                            $movimiento = $rowPrestamo->movimientos()->create([
+                                'socios_id'       => $request->socios_id[$key],
+                                'fecha'           => Carbon::now(),
+                                'folio'           => 'MOV-',
+                                'saldo_anterior'  => $socio->saldo,
+                                'saldo_actual'    => $socio->saldo,
+                                'monto'           => $abonoRealDescuento,
+                                'movimiento'      => 'PAGO PRÉSTAMO',
+                                'tipo_movimiento' => 'ABONO',
+                                'metodo_pago'     => 'EFECTIVO',
+                                'estatus'         => 'EFECTUADO',
                             ]);
+
+                            // Folio basado en ID real
+                            $movimiento->update([
+                                'folio' => 'MOV-' . $movimiento->id,
+                            ]);
+
                             $socio->monto_prestamos = $socio->monto_prestamos - $abonoReal;
                             $socio->save();
                         }
@@ -345,7 +403,7 @@ class PagosPrestamosController extends Controller
             return redirect()->route('admin.socios.index')->with(['correcto' => 'success']);
         } catch (Exception $e) {
             \DB::rollback();
-            dd($e);
+            //dd($e);
             $query = $e->getMessage();
             return json_encode($query);
             return redirect()->back()
