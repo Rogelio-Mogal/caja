@@ -211,6 +211,22 @@
                 // Prevenir el envío del formulario por defecto
                 event.preventDefault();
 
+                Swal.fire({
+                    title: '¿Confirmar envío?',
+                    text: 'Se enviarán todos los registros obtenidos en el Excel.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, enviar',
+                    cancelButtonText: 'Cancelar',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showLoaderOnConfirm: true,
+                    preConfirm: () => {
+                        enviarFormulario();
+                    }
+                });
+
+
                 // Verificar si hay datos en la tabla #tblDB
                 //const resultadoOkTable = document.querySelector('#tblDB');
 
@@ -226,13 +242,44 @@
                     //}).then((result) => {
                         //if (result.isConfirmed) {
                             // Si el usuario confirmó, enviar el formulario
-                            document.getElementById('form_excel_pagos').submit();
-                            console.log('enviaria el formulario');
-                            $("#submitBtn").attr("disabled", true);
+                            //--document.getElementById('form_excel_pagos').submit();
+                            //--console.log('enviaria el formulario');
+                            //--$("#submitBtn").attr("disabled", true);
                         //}
                     //});
                 //}
             });
+
+            function enviarFormulario() {
+
+                var table = $('#tblOk').DataTable();
+
+                // 1️⃣ Quitar name a inputs visibles (evita duplicados)
+                $('#tblOk tbody input').each(function () {
+                    $(this).data('original-name', $(this).attr('name'));
+                    $(this).removeAttr('name');
+                });
+
+                // 2️⃣ Elimina clones anteriores
+                $('#form_excel_pagos .dt-hidden').remove();
+
+                // 3️⃣ Clona inputs de TODAS las filas
+                table.rows({ page: 'all' }).every(function () {
+                    var row = $(this.node());
+
+                    row.find('input').each(function () {
+                        let clone = $(this).clone();
+                        clone.attr('name', $(this).data('original-name'));
+                        clone.addClass('dt-hidden');
+                        clone.appendTo('#form_excel_pagos');
+                    });
+                });
+
+                // 4️⃣ Enviar
+                document.getElementById('form_excel_pagos').submit();
+                $("#submitBtn").attr("disabled", true);
+            }
+
 
             //BLOQUEA EL BOTON PARA QUE EL FORMULARIO SE ENVIE UNA VEZ
             $('#form_excel_pagos').submit(function() {

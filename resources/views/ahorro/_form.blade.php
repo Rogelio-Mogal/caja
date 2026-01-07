@@ -97,7 +97,7 @@
                 <div class="col-lg-2 col-md-2 col-sm-2">
                     <div class="col mb-3">
                         <div class="form-outline">
-                            
+
                             {{ Form::hidden('tipoSangre') }}
 
                             {!! Form::select(
@@ -179,8 +179,8 @@
             let formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
             // Mostrar correctamente si apenas están escribiendo el punto
-            input.value = decimalPart !== '' || value.endsWith('.') 
-                ? `${formattedInteger}.` + decimalPart 
+            input.value = decimalPart !== '' || value.endsWith('.')
+                ? `${formattedInteger}.` + decimalPart
                 : formattedInteger;
 
             // Actualizar el hidden limpio (sin comas)
@@ -234,8 +234,6 @@
             }
         });
 
-
-
         $(document).ready(function() {
             // Estilos para el select2 con BoostrapMD
             // Inicializar Select2
@@ -260,7 +258,7 @@
             var submitBtn = document.getElementById('submitBtn');
             var form = submitBtn.form;
 
-            submitBtn.addEventListener('click', function(event) {
+            /*submitBtn.addEventListener('click', function(event) {
                 // Deja que el navegador valide primero
                 if (!form.checkValidity()) {
                     // Formulario no válido, el navegador mostrará los errores nativos
@@ -278,6 +276,48 @@
                     form.submit();
                 }
             });
+            */
+
+            submitBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+
+                // 1️⃣ Validación nativa HTML
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                // 2️⃣ Validación de negocio
+                if (document.getElementById('metodo_pago').value === '-1') {
+                    document.getElementById('sangre_feedback').style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('sangre_feedback').style.display = 'none';
+
+                const socioText = $('#socios_id option:selected').text();
+                const monto = document.getElementById('pp_display').value;
+
+                Swal.fire({
+                    title: 'Confirmar ahorro',
+                    html: `
+                        <p><b>Socio:</b> ${socioText}</p>
+                        <p><b>Monto:</b> $${monto}</p>
+                        <p>¿Deseas continuar?</p>
+                    `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, guardar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitBtn.disabled = true;
+                        form.submit();
+                    }
+                });
+
+            });
+
 
             socios();
             // FUNCION PARA OBTENER LOS SOCIOS

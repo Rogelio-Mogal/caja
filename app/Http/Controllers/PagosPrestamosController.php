@@ -103,6 +103,7 @@ class PagosPrestamosController extends Controller
                         ->get(['prestamo_detalles.*']);
 
                     if ($avales->count() > 0) {
+
                         $totalAvales = $avales->count();
                         $abonoAval = $prestamoPago->capital / $totalAvales;
                         $sumaAbonosAval = 0;
@@ -160,7 +161,7 @@ class PagosPrestamosController extends Controller
                                 'saldo_anterior'  => $aval->saldo,
                                 'saldo_actual'    => $aval->saldo,
                                 'monto'           => $abonoReal,
-                                'movimiento'      => 'PAGO PRÉSTAMO',
+                                'movimiento'      => 'PAGO PRÉSTAMO -AVAL-',
                                 'tipo_movimiento' => 'ABONO',
                                 'metodo_pago'     => 'EFECTIVO',
                                 'estatus'         => 'EFECTUADO',
@@ -170,7 +171,6 @@ class PagosPrestamosController extends Controller
                             $movimiento->update([
                                 'folio' => 'MOV-' . $movimiento->id,
                             ]);
-
 
                             $aval->monto_prestamos = $aval->monto_prestamos - $abonoReal;
                             $aval->save();
@@ -254,7 +254,7 @@ class PagosPrestamosController extends Controller
                                     'saldo_anterior'  => $socio->saldo,
                                     'saldo_actual'    => $socio->saldo,
                                     'monto'           => $capitalRestante,
-                                    'movimiento'      => 'PAGO PRÉSTAMO',
+                                    'movimiento'      => 'PAGO PRÉSTAMO -AVAL-',
                                     'tipo_movimiento' => 'ABONO',
                                     'metodo_pago'     => 'EFECTIVO',
                                     'estatus'         => 'EFECTUADO',
@@ -264,8 +264,6 @@ class PagosPrestamosController extends Controller
                                 $movimiento->update([
                                     'folio' => 'MOV-' . $movimiento->id,
                                 ]);
-
-
 
                                 $socio->monto_prestamos = $socio->monto_prestamos - $capitalRestante;
                                 $socio->save();
@@ -895,7 +893,7 @@ class PagosPrestamosController extends Controller
                     'serie-no-db' => $allSerieNoDb,
                     'serie-no-excel' => $allSerieNoExcel,
                     'importe_total' => $totalImporte
-                   
+
                 ]
             );
         }
