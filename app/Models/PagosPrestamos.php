@@ -26,6 +26,11 @@ class PagosPrestamos extends Model
         'decuento',
         'fecha_tabla',
         'pagado',
+
+        'es_adelantado', // para saber si fue una liquidación y poder revertirlo
+        'es_reversion', // para saber si fue una liquidación y poder revertirlo
+        'reversion_de', // para saber si fue una liquidación y poder revertirlo
+
         'wci',
         'activo',
     ];

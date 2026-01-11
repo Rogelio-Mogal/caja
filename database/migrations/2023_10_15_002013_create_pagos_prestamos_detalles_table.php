@@ -27,6 +27,11 @@ return new class extends Migration
                 ->onDelete('no action');
             $table->string('tipo_cliente',50); //SOCIOS; AVAL
             $table->decimal('abona', $precision = 12, $scale = 3);
+
+            $table->boolean('es_adelantado')->default(0);
+            $table->boolean('es_reversion')->default(0);
+            $table->unsignedBigInteger('reversion_de')->nullable();
+
             $table->integer('wci');
             $table->boolean('activo')->default(1);
             $table->timestamps();

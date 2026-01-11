@@ -36,6 +36,10 @@ return new class extends Migration
             $table->date('fecha_tabla')->nullable(); // Fecha en la cual se realiza el descuento --de la tabla
             $table->boolean('pagado')->default(0);
 
+            $table->boolean('es_adelantado')->default(0);
+            $table->boolean('es_reversion')->default(0);
+            $table->unsignedBigInteger('reversion_de')->nullable();
+
             $table->integer('wci');
             $table->boolean('activo')->default(1);
             $table->timestamps();

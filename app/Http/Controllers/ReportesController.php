@@ -107,22 +107,22 @@ class ReportesController extends Controller
                         prestamos.fecha_ultimo_descuento,
                         prestamos.pago_quincenal,
                         -- Suma de capital donde forma_pago está vacío
-                        COALESCE(SUM(CASE 
-                            WHEN (pagos_prestamos.forma_pago IS NULL OR pagos_prestamos.forma_pago = "") 
-                            THEN pagos_prestamos.decuento 
-                            ELSE 0 
+                        COALESCE(SUM(CASE
+                            WHEN (pagos_prestamos.forma_pago IS NULL OR pagos_prestamos.forma_pago = "")
+                            THEN pagos_prestamos.decuento
+                            ELSE 0
                         END), 0) as capital_sin_forma_pago,
 
                         -- Suma de capital donde forma_pago tiene algún valor
-                        COALESCE(SUM(CASE 
-                            WHEN (pagos_prestamos.forma_pago IS NOT NULL AND pagos_prestamos.forma_pago != "") 
-                            THEN pagos_prestamos.capital 
-                            ELSE 0 
+                        COALESCE(SUM(CASE
+                            WHEN (pagos_prestamos.forma_pago IS NOT NULL AND pagos_prestamos.forma_pago != "")
+                            THEN pagos_prestamos.capital
+                            ELSE 0
                         END), 0) as capital_con_forma_pago,
 
-                        MAX(CASE 
+                        MAX(CASE
                             WHEN (pagos_prestamos.forma_pago IS NOT NULL AND pagos_prestamos.forma_pago != "" )
-                            THEN pagos_prestamos.forma_pago 
+                            THEN pagos_prestamos.forma_pago
                         END) as tipo_forma_pago
                     ')
                     ->get();
@@ -162,9 +162,9 @@ class ReportesController extends Controller
                         ->selectRaw("
                             YEAR(pp.fecha_tabla) as anio,
                             MONTH(pp.fecha_tabla) as mes,
-                            CASE 
-                                WHEN DAY(pp.fecha_tabla) <= 15 THEN 1 
-                                ELSE 2 
+                            CASE
+                                WHEN DAY(pp.fecha_tabla) <= 15 THEN 1
+                                ELSE 2
                             END as quincena,
                             SUM(pp.capital) as total_capital,
                             SUM(pp.interes) as total_interes,
@@ -212,7 +212,7 @@ class ReportesController extends Controller
                     }
                     */
                 break;
-                
+
                 case 'ingreso-efectivo':
 
                         // 1. Ahorros en efectivo (no aportación)
@@ -232,7 +232,7 @@ class ReportesController extends Controller
                             ->where('metodo_pago', 'EFECTIVO')
                             ->where('is_aportacion', 1)
                             ->sum('monto');
-                        
+
                         $total_aportacion_efectivo = $ahorros_efectivo + $prestamos_efectivo + $aportaciones_efectivo;
 
                         // Resultado
@@ -251,7 +251,7 @@ class ReportesController extends Controller
                 case 'arqueo-caja':
 
                         $fechaAnterior = Carbon::parse($fechaInicio)->subDay()->toDateString(); // "2025-07-07"
-                        
+
                         $saldo_inicial = EfectivoDiario::selectRaw('
                             SUM(b_mil) as b_mil,
                             SUM(b_quinientos) as b_quinientos,
@@ -323,6 +323,7 @@ class ReportesController extends Controller
                 });
             }
             if ($tipo === 'pago-liquidacion') {
+                $totalDescuento = $datos->sum('pago_quincenal');
                 $totalMonto = $datos->sum('monto_prestamo');
                 $totalIntereses = $datos->sum('capital_sin_forma_pago');
                 $totalTres = $datos->sum('capital_con_forma_pago');
@@ -363,11 +364,12 @@ class ReportesController extends Controller
         $totalTres = $totalTres ?? 0;
         $totalCuatro = $totalCuatro ?? 0;
         $totalesPorMetodo = $totalesPorMetodo ?? collect();
+        $totalDescuento = $totalDescuento ?? 0;
 
         //dd($datos);
 
         return view('reportes.index', compact('tipo', 'datos', 'fechaInicio', 'fechaFin',
-        'totalMonto', 'totalIntereses', 'totalesPorMetodo','totalTres', 'totalCuatro')
+        'totalMonto', 'totalIntereses', 'totalesPorMetodo','totalTres', 'totalCuatro','totalDescuento')
         );
     }
 
@@ -418,7 +420,7 @@ class ReportesController extends Controller
     public function exportLiquidosPrestamos(Request $request)
     {
         $tipo = $request->query('tipo');
-        
+
         $fechaInicio = Carbon::parse($request->query('fecha_inicio'))->startOfDay();
         $fechaFin = Carbon::parse($request->query('fecha_fin'))->endOfDay();
 
@@ -464,22 +466,22 @@ class ReportesController extends Controller
                     prestamos.fecha_ultimo_descuento,
                     prestamos.pago_quincenal,
                     -- Suma de capital donde forma_pago está vacío
-                    COALESCE(SUM(CASE 
-                        WHEN (pagos_prestamos.forma_pago IS NULL OR pagos_prestamos.forma_pago = "") 
-                        THEN pagos_prestamos.decuento 
-                        ELSE 0 
+                    COALESCE(SUM(CASE
+                        WHEN (pagos_prestamos.forma_pago IS NULL OR pagos_prestamos.forma_pago = "")
+                        THEN pagos_prestamos.decuento
+                        ELSE 0
                     END), 0) as capital_sin_forma_pago,
 
                     -- Suma de capital donde forma_pago tiene algún valor
-                    COALESCE(SUM(CASE 
-                        WHEN (pagos_prestamos.forma_pago IS NOT NULL AND pagos_prestamos.forma_pago != "") 
-                        THEN pagos_prestamos.capital 
-                        ELSE 0 
+                    COALESCE(SUM(CASE
+                        WHEN (pagos_prestamos.forma_pago IS NOT NULL AND pagos_prestamos.forma_pago != "")
+                        THEN pagos_prestamos.capital
+                        ELSE 0
                     END), 0) as capital_con_forma_pago,
 
-                    MAX(CASE 
+                    MAX(CASE
                         WHEN (pagos_prestamos.forma_pago IS NOT NULL AND pagos_prestamos.forma_pago != "" )
-                        THEN pagos_prestamos.forma_pago 
+                        THEN pagos_prestamos.forma_pago
                     END) as tipo_forma_pago
                 ')
                 ->get();
@@ -597,7 +599,7 @@ class ReportesController extends Controller
             }
 
             if ($request->query('formato') == 'pdf') {
-                
+
                 $pagosFiltrados = PagosPrestamos::with(['prestamo', 'socio'])
                 ->whereBetween('fecha_tabla', [$fechaInicio, $fechaFin])
                 ->orderBy('serie_pago', 'desc')
@@ -659,7 +661,7 @@ class ReportesController extends Controller
                     ->where('metodo_pago', 'EFECTIVO')
                     ->where('is_aportacion', 1)
                     ->sum('monto');
-                
+
                 $total_aportacion_efectivo = $ahorros_efectivo + $prestamos_efectivo + $aportaciones_efectivo;
 
                 // Resultado
@@ -671,7 +673,7 @@ class ReportesController extends Controller
                     'aportaciones_efectivo' => $aportaciones_efectivo,
                     'total_aportacion_efectivo' => $total_aportacion_efectivo,
                 ]);
-                
+
 
                 $pdf = PDF::loadView('reportes.pdf.ingreso_efectivo', compact('tipo', 'datos', 'fechaInicio', 'fechaFin'));
                 return $pdf->download('reporte_ingreso_efectivo.pdf');
@@ -686,7 +688,7 @@ class ReportesController extends Controller
         $tipo = $request->query('tipo');
         $fechaInicio = Carbon::parse($request->query('fecha_inicio'))->startOfDay();
         $fechaFin = Carbon::parse($request->query('fecha_fin'))->endOfDay();
-        
+
 
         if ($tipo == 'arqueo-caja') {
             if ($request->query('formato') == 'excel') {
@@ -698,7 +700,7 @@ class ReportesController extends Controller
             if ($request->query('formato') == 'pdf') {
 
                 $fechaAnterior = Carbon::parse($fechaInicio)->subDay()->toDateString(); // "2025-07-07"
-                        
+
                 $saldo_inicial = EfectivoDiario::selectRaw('
                     SUM(b_mil) as b_mil,
                     SUM(b_quinientos) as b_quinientos,
@@ -746,7 +748,7 @@ class ReportesController extends Controller
                     'retiros' => $retiros,
                     'efectivo_diario' => $efectivo_suma,
                 ]);
-                
+
 
                 $pdf = PDF::loadView('reportes.partials.arqueo_caja', compact('tipo', 'datos', 'fechaInicio', 'fechaFin'));
                 return $pdf->download('reporte_arqueo_caja.pdf');

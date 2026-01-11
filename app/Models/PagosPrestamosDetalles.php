@@ -15,6 +15,11 @@ class PagosPrestamosDetalles extends Model
         'socios_id',
         'tipo_cliente',
         'abona',
+
+        'es_adelantado', // para saber si fue una liquidación y poder revertirlo
+        'es_reversion', // para saber si fue una liquidación y poder revertirlo
+        'reversion_de', // para saber si fue una liquidación y poder revertirlo
+
         'wci',
         'activo',
     ];

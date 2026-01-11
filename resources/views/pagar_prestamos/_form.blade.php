@@ -53,400 +53,208 @@
 @stop
 
 <br />
-<meta name="csrf-token" content="{{ csrf_token() }}">
 @csrf
 <div class="card card-outline card-primary">
-    <div class="card-header">
-        <h3 class="card-title">NUEVO PRESTAMO</h3>
-    </div>
+
     <div class="card-body">
         <div class="register-box-body">
-            <div class="card border border-success shadow-0 mb-3">
-                <div class="card-header">
-                    <div class="row">
-                        <div class="col-lg-6 col-md-6 col-sm-12">
-                            <h4>DETALLE DE SOCIO PARA PRÉSTAMO</h4>
-                        </div>
-                        <div class="col-lg-6 col-md-6 col-sm-12">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="apoyo_adicional"
-                                    name="apoyo_adicional" value="0" disabled />
-                                <label class="form-check-label" for="apoyo_adicional">Apoyo adicional ($5,000)</label>
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-lg-6 col-md-6 col-sm-6">
+                        <h5 class="card-title b-0">PAGAR PRÉSTAMO / EDITAR: {{ $socio->nombre_completo }}</h5>
+                    </div>
+                    <div class="col-lg-3 col-md-3 col-sm-3">
+                        <h5 class="card-title b-0">SALDO SOCIO: ${{ number_format($socio->saldo, 2) }}</h5>
+                        <input id="saldo" name="saldo" type="hidden" value="{{ $socio->saldo }}" />
+                    </div>
+                    <div class="col-lg-3 col-md-3 col-sm-3">
+                        <h5 class="card-title b-0">SALDO PRÉSTAMO: <samp id="monto_a_saldar">$0</samp></h5>
+                        <input id="monto_saldar" name="monto_saldar" type="hidden" value="0" />
+                    </div>
+                </div>
+                <br/>
+                <div class="row">
+
+                    <div class="col-lg-3 col-md-3 col-sm-6">
+                        <div class="col mb-3">
+                            <div class="form-outline">
+
+                                {{ Form::hidden('h_forma_pago') }}
+
+                                {!! Form::select(
+                                    'forma_pago',
+                                    ['-1' => '- SELECCIONE -'] + array_combine($tipoValues, $tipoValues), // Combina el array para que sea usable en el select
+                                    old('forma_pago', optional($pagos->last())->forma_pago ?? '-1'),
+                                    [
+                                        'class' => 'select mb-2',
+                                        'id' => 'forma_pago',
+                                        'data-mdb-filter' => 'true',
+                                        'tabindex' => '1',
+                                    ]
+                                ) !!}
+                                <label class="form-label select-label" for="forma_pago">FORMA DE PAGO</label>
+                                <div class="form-helper" id="sangre_feedback" style="color: red; display: none;">Este
+                                    campo es requerido.</div>
                             </div>
+                            @error('forma_pago')
+                                <p class="error-message text-danger">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-3 col-sm-6">
+                        <div class="col mb-3">
+                            <div class="form-outline">
+
+                                {{ Form::hidden('h_metodo_pago') }}
+
+                                {!! Form::select(
+                                    'metodo_pago',
+                                    [
+                                        '-1' => '- MÉTODO DE PAGO -',
+                                        'EFECTIVO' => 'EFECTIVO',
+                                        'TRANSFERENCIA ELECTRÓNICA' => 'TRANSFERENCIA ELECTRÓNICA',
+                                        'DEPÓSITO' => 'DEPÓSITO',
+                                        'CHEQUE' => 'CHEQUE',
+                                        'TRASLADO DE AHORRO' => 'TRASLADO DE AHORRO',
+                                    ],
+                                    old('metodo_pago', optional($pagos->last())->metodo_pago ?? '-1'),
+                                    ['id' => 'metodo_pago', 'class' => 'select', 'required' => 'true','tabindex' => '3'],
+                                ) !!}
+                                <label class="form-label select-label" for="metodo_pago">MÉTODO DE PAGO</label>
+                                <div class="form-helper" id="sangre_feedback" style="color: red; display: none;">Este
+                                    campo es requerido.</div>
+                            </div>
+                            @error('metodo_pago')
+                                <p class="error-message text-danger">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="col-lg-2 col-md-2 col-sm-6">
+                        <div class="col mb-3">
+                            <div class="form-outline">
+                                {{ Form::date(
+                                    'fecha_ultimo_descuento',
+                                    optional($prestamo->fecha_pago_reestructuracion)
+                                        ? \Carbon\Carbon::parse($prestamo->fecha_pago_reestructuracion)->format('Y-m-d')
+                                        : \Carbon\Carbon::now('America/Mexico_City')->format('Y-m-d'),
+                                    [
+                                        'id' => 'fecha_ultimo_descuento',
+                                        'class' => 'form-control',
+                                    ]
+                                ) }}
+                                <label for="fecha_ultimo_descuento" class="form-label">ÚLTIMO DESCUENTO</label>
+                            </div>
+
+                            @error('fecha_ultimo_descuento')
+                                <p class="error-message text-danger">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-4 col-sm-6">
+                        <div class="col mb-3">
+                            <div class="form-outline">
+                                {{ Form::text('referencia', old('referencia', $pagos[0]->referencia), ['id' => 'referencia', 'class' => 'form-control uppercase', 'placeholder' => 'Referencia', 'tabindex' => '2']) }}
+                                <label class="form-label select-label" for="referencia">REFERENCIA</label>
+                                <div class="form-helper" id="sangre_feedback" style="color: red; display: none;">Este
+                                    campo es requerido.</div>
+                            </div>
+                            @error('referencia')
+                                <p class="error-message text-danger">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
                 </div>
-                <div class="card-body text-dark">
-                    <div class="row">
-                        <div class="col-lg-4 col-md-4 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <span tabindex="1" data-mdb-toggle="tooltip" title="SOCIO">
-                                        {{ Form::hidden('hidde', null) }}
-                                        {{--
-                                        <select class="select mb-2" name="socios_id" id="socios_id"
-                                            data-mdb-filter="true" data-mdb-option-height="50" required="true">
-                                            <option value="-1" hidden selected>-- Socios --</option>
-                                        </select>
-                                        --}}
-                                        <select id="socios_id" name="socios_id" class="form-control select2" style="width: 100%;" required>
-                                        </select>
-                                        <label class="form-label select-label form-control-lg"
-                                            for="socios_id">&nbsp;</label>
-                                    </span>
-                                    <div class="form-helper" id="socio_feedback" style="color: red; display: none;">Este
-                                        campo es requerido.</div>
-                                </div>
-                                @error('socios_id')
-                                    <p class="error-message text-danger">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-2 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    {{ Form::hidden('hidde', null) }}
-                                    <span tabindex="2" data-mdb-toggle="tooltip" title="MONTO PRESTAMO">
-                                        <div class="form-outline">
-                                            {{ Form::number('monto_prestamo', null, ['id' => 'monto_prestamo', 'class' => 'form-control uppercase generaIntereses generaTotalAvalar', 'placeholder' => 'MONTO PRESTAMO', 'required']) }}
-                                            <label class="form-label" for="monto_prestamo">MONTO
-                                                PRESTAMO</label>
-                                            <div class="invalid-feedback">
-                                                Please provide a valid input.
-                                            </div>
-                                            <input id="monto_prestamos" name="monto_prestamos" type="hidden"
-                                                value="0" step="any" />
 
-                                        </div>
-                                    </span>
-                                </div>
-                                @error('monto_prestamo')
-                                    <p class="error-message text-danger">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-2 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    {{ Form::hidden('hidde', null) }}
-                                    <span tabindex="2" data-mdb-toggle="tooltip" title="TOTAL QUINCENAS">
-                                        <div class="form-outline">
-                                            {{ Form::number('total_quincenas', null, ['id' => 'total_quincenas', 'class' => 'form-control uppercase generaIntereses', 'placeholder' => 'TOTAL QUINCENAS', 'required']) }}
-                                            <label class="form-label" for="total_quincenas">TOTAL QUINCENAS</label>
-                                            <div class="invalid-feedback">
-                                                Please provide a valid input.
-                                            </div>
-                                            <input id="total_intereses" name="total_intereses" type="hidden"
-                                                value="0" />
-                                            <input id="total_cap_interes" name="total_cap_interes" type="hidden"
-                                                value="0" />
-                                            {{ Form::hidden('saldo_socio', null, ['id' => 'saldo_socio', 'class' => 'generaIntereses generaTotalAvalar', 'step' => 'any']) }}
-                                        </div>
-                                    </span>
-                                </div>
-                                @error('total_quincenas')
-                                    <p class="error-message text-danger">{{ $message }}</p>
-                                @enderror
-                            </div>
+            </div>
+            <div class="card-body">
+                <div class="register-box-body">
+                    <div class="card border border-success shadow-0 mb-3">
+                        <div class="card-header">
+                            <h4>PRÉSTAMOS</h4>
                         </div>
 
-                        <div class="col-lg-2 col-md-2 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    {{ Form::hidden('hidde', null) }}
-                                    <span tabindex="2" data-mdb-toggle="tooltip" title="PAGOS QUINCENALES">
-                                        <div class="form-outline">
-                                            {{ Form::text('pago_quincenal', null, ['id' => 'pago_quincenal', 'class' => 'form-control uppercase', 'placeholder' => 'PAGOS QUINCENALES', 'step' => 'any', 'required']) }}
-                                            <label class="form-label" for="pago_quincenal">PAGOS QUINCENALES</label>
-                                            <div class="invalid-feedback">
-                                                Please provide a valid input.
-                                            </div>
-                                        </div>
-                                    </span>
-                                </div>
-                                @error('pago_quincenal')
-                                    <p class="error-message text-danger">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-2 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    {{ Form::hidden('hidde', null) }}
-                                    <span tabindex="1" data-mdb-toggle="tooltip" title="PRESTAMO + INTERESES">
-                                        <div class="form-outline">
-                                            {{ Form::text('prestamo_intereses', null, ['id' => 'prestamo_intereses', 'name' => 'prestamo_intereses', 'class' => 'form-control uppercase', 'placeholder' => 'PRESTAMO + INTERESES', 'step' => 'any', 'required']) }}
-                                            <label class="form-label" for="prestamo_intereses">PRESTAMO +
-                                                INTERESES</label>
-                                            <div class="invalid-feedback">
-                                                Please provide a valid input.
-                                            </div>
-                                        </div>
-                                    </span>
-                                </div>
-                                @error('prestamo_intereses')
-                                    <p class="error-message text-danger">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline datepicker-translated" data-mdb-toggle-button="false">
-                                    {{ Form::text('fecha_primer_pago', null, ['id' => 'fecha_primer_pago', 'name' => 'fecha_primer_pago', 'data-mdb-toggle' => 'datepicker', 'class' => 'form-control', 'placeholder' => 'FECHA DEL PRIMER PAGO']) }}
-                                    <label for="fecha_primer_pago" class="form-label">FECHA DEL PRIMER PAGO</label>
-                                </div>
-                            </div>
-                        </div>
+                        <meta name="csrf-token" content="{{ csrf_token() }}">
+                        @csrf
+                        <input id="socios_id" name="socios_id" type="hidden" value="{{ $socio->id }}" />
 
-                        <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <div class="form-outline">
-                                        <span tabindex="3" data-mdb-toggle="tooltip" title="NÚMERO DE SOCIO">
-                                            <input class="form-control" id="num_socio" type="text"
-                                                value="NÚMERO DE SOCIO" aria-label="readonly input example"
-                                                readonly />
-                                            <label class="form-label form-control-lg" for="num_socio">NÚMERO DE
-                                                SOCIO</label>
-                                        </span>
-                                    </div>
-                                </div>
+                        <table id="tabla-prestamos" class="table">
+                            <thead>
+                                <tr>
+                                    <!--
+                                    <th scope="col">
+                                        Selección
+                                         <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="select-all">
+                                        </div>
+                                    </th>-->
+                                    <th scope="col">Selección</th>
+                                    <th scope="col">Préstamo</th>
+                                    <th scope="col">Serie</th>
+                                    <th scope="col">Capital</th>
+                                    <th scope="col">Descuento</th>
+                                    <th scope="col">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-group-divider table-divider-color">
+                                @forelse($pagos as $row)
+                                    <tr>
+                                        <th scope="row">
+                                            <div class="form-check">
+                                                {{-- <input class="form-check-input prestamo-check" type="checkbox"
+                                                    name="prestamos_id[]" value="{{ $row->pago_id }}"
+                                                    data-debe="{{ $row->capital }}">
+
+                                                <input class="form-check-input prestamo-check"
+                                                    type="checkbox"
+                                                    name="prestamos_id[]"
+                                                    value="{{ $row->pago_id }}"
+                                                    data-debe="{{ $row->capital }}"
+                                                    data-group="{{ str_replace(' ', '_', $row->numero_prestamo) }}">--}}
+
+                                                <input class="form-check-input prestamo-check"
+                                                    type="checkbox"
+                                                    name="prestamos_id[]"
+                                                    value="{{ $row->pago_id }}"
+                                                    data-debe="{{ $row->capital }}"
+                                                    data-group="{{ str_replace(' ', '_', $row->numero_prestamo) }}"
+                                                    data-serie="{{ $row->serie_pago }}"
+                                                    data-fecha="{{ \Carbon\Carbon::parse($row->fecha_tabla)->format('Y-m-d') }}">
+
+
+
+                                            </div>
+                                        </th>
+                                        <td>{{$row->numero_prestamo}}</td>
+                                        <td>{{$row->serie_pago}}</td>
+                                        {{--<td>$ {{ number_format($row->monto_prestamo, 2) }}</td>--}}
+                                        <td>$ {{ number_format($row->capital, 2) }} </td>
+                                        <td>$ {{ number_format($row->decuento, 2) }} </td>
+                                        <td>{{ \Carbon\Carbon::parse($row->fecha_tabla)->format('d/m/Y') }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5">No se encontró ningún registro</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 col-sm-12 text-center">
+                                {!! Form::button('ACTUALIZAR', ['type' => 'submit', 'class' => 'btn btn-primary', 'id' => 'submitBtn']) !!}
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <span tabindex="4" data-mdb-toggle="tooltip" title="PRESTAMOS ACTIVOS">
-                                        <input class="form-control" id="numero_prestamos" type="text"
-                                            value="PRESTAMOS ACTIVOS" aria-label="readonly input example" readonly />
-                                        <label class="form-label form-control-lg" for="numero_prestamos">PRESTAMOS
-                                            ACTIVOS</label>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <span tabindex="5" data-mdb-toggle="tooltip" title="FECHA DE ALTA">
-                                        <input class="form-control" id="fecha_alta" type="text"
-                                            value="FECHA DE ALTA" aria-label="readonly input example" readonly />
-                                        <label class="form-label form-control-lg" for="fecha_alta">FECHA DE
-                                            ALTA</label>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <span tabindex="6" data-mdb-toggle="tooltip" title="RFC">
-                                        <input class="form-control" id="rfc" type="text" value="RFC"
-                                            aria-label="readonly input form-control-lg" readonly />
-                                        <label class="form-label form-control-lg" for="rfc">RFC</label>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <span tabindex="7" data-mdb-toggle="tooltip" title="SALDO AHORRADO">
-                                        <input class="form-control" id="saldo" name="saldo" type="text"
-                                            value="SALDO AHORRADO" aria-label="readonly input example" readonly />
-                                        <label class="form-label form-control-lg" for="saldo">SALDO
-                                            AHORRADO</label>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <span tabindex="8" data-mdb-toggle="tooltip" title="SALDO DISPONIBLE">
-                                        <input class="form-control" id="disponible_socio" name="disponible_socio"
-                                            type="text" value="SALDO DISPONIBLE"
-                                            aria-label="readonly input example" readonly />
-                                        <input id="monto_socio" name="monto_socio" type="hidden" value="0" />
-                                        <label class="form-label form-control-lg" for="disponible_socio">SALDO
-                                            DISPONIBLE</label>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <span tabindex="9" data-mdb-toggle="tooltip" title="SALDO DISPONIBLE CON AVAL">
-                                        <input class="form-control" id="disponible_aval" type="text"
-                                            value="SALDO DISPONIBLE CON AVAL" aria-label="readonly input example"
-                                            readonly />
-                                        <label class="form-label form-control-lg" for="disponible_aval">SALDO
-                                            DISPONIBLE CON AVAL</label>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                        </br>
                     </div>
                 </div>
             </div>
-
-            <div class="card border border-info shadow-0 mb-3">
-                <div class="card-header">
-                    <h4>GENERAR TABLA DE INTERESES</h4>
-                </div>
-                <div class="card-body text-dark">
-                    <div class="row">
-                        <div class="col-lg-12 col-md-12 col-sm-12" style="display: none">
-                            <div class="card-body table-responsive p-0">
-                                <table id="tabla-interesuno" class="table responsive nowrap">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Pago</th>
-                                            <th>Capital</th>
-                                            <th>Interés</th>
-                                            <th>Cap + Int</th>
-                                            <th>Saldo Final</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                    <tfoot>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="col-lg-12 col-md-12 col-sm-12">
-                            <div class="card-body table-responsive p-0">
-                                <table id="tabla-interesdos" class="table responsive nowrap">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Pago</th>
-                                            <th>Capital</th>
-                                            <th>Interés</th>
-                                            <th>Descuento</th>
-                                            <th>Saldo Final</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                    <tfoot>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
-            <div class="card border border-primary shadow-0 mb-3">
-                <div class="card-header">
-                    <div class="row align-items-center">
-                        <div class="col-lg-4 col-md-12">
-                            <h4 class="card-title">BUSCAR AVAL</h4>
-                        </div>
-                        <div class="col-lg-4 col-md-2">
-                            <h4 class="card-title">TOTAL PARA AVALAR:</h4>
-                            <input type="hidden" id="total_avalar_input" name="total_avalar_input" value="0">
-                            <div id="total_avalar_text"></div>
-                        </div>
-                        <div class="col-lg-4 col-md-2">
-                            <h4 class="card-title">TOTAL FALTANTE POR AVALAR:</h4>
-                            <input type="hidden" id="total_faltante_avalar_input" name="total_faltante_avalar_input"
-                                value="0">
-                            <input type="hidden" id="suma_faltante_avalar" name="suma_faltante_avalar"
-                                value="0">
-                            <div id="total_faltane_avalar_text"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body text-dark">
-                    <div
-                        class="d-flex justify-content-center row row-cols-lg-auto mb-2 align-items-center  p-2 mx-4 my-1">
-                        <div class="col-lg-5 col-md-5 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    {{ Form::hidden('hidde', null) }}
-                                    <span tabindex="10" data-mdb-toggle="tooltip" title="AVALES">
-                                        <select class="select mb-2" name="aval_id" id="aval_id"
-                                            data-mdb-filter="true" data-mdb-option-height="50">
-                                            <option value="" hidden selected>-- Avales --</option>
-                                        </select>
-                                        <label class="form-label select-label form-control-lg"
-                                            for="aval_id">AVALES</label>
-                                    </span>
-                                </div>
-                                @error('aval_id')
-                                    <p class="error-message text-danger">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-2 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <input class="form-control" id="saldo_disponible_aval" type="text"
-                                        value="0" aria-label="readonly input example" readonly />
-                                    <label class="form-label" for="saldo_disponible_aval">SALDO DISPONIBLE</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-2 col-sm-12">
-                            <div class="col mb-3">
-                                <div class="form-outline">
-                                    <input class="form-control" id="is_aval" type="text" value="0"
-                                        aria-label="readonly input example" readonly />
-                                    <label class="form-label" for="is_aval">HA SIDO AVAL</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-2 col-sm-12">
-                            <div class="col mb-3">
-                                <label for="add_aval">&nbsp;</label>
-                                {!! Form::button('AGREGAR', ['type' => 'button', 'class' => 'btn btn-primary', 'id' => 'add_aval']) !!}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-12 col-md-12 col-sm-12">
-                            <div class="card-body table-responsive p-0">
-                                <table id="tbl_aval" class="table responsive nowrap">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Num Socio</th>
-                                            <th>Nombre</th>
-                                            <th>Apellido Paterno</th>
-                                            <th>Apellido Materno</th>
-                                            <th>Rfc</th>
-                                            <th>Saldo Disponiblo</th>
-                                            <th>Saldo avalar</th>
-                                            <th>Eliminar</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Aquí se agregarán las filas de los registros -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            @include('prestamos._modal_contrasenia')
 
-            <div class="row ">
-                <div class="col-lg-12 col-md-12 col-sm-12" align="center">
-                    <div class="col-2">
-                        <br />
-                        {!! Form::button('Guardar', ['type' => 'submit', 'class' => 'btn btn-primary', 'id' => 'submitBtn']) !!}
-                    </div>
-                </div>
-            </div>
             <br />
             <br />
 
@@ -457,1361 +265,408 @@
 
 @section('js')
     <script>
+
+        const inputFecha = document.getElementById('fecha_ultimo_descuento');
+
+        inputFecha.addEventListener('change', function () {
+            validarFechaPermitida(this);
+            filtrarPorFecha();
+        });
+
+        function validarFechaPermitida(input) {
+            if (!input.value) return;
+
+            const [y, m, d] = input.value.split('-').map(Number);
+            const ultimoDia = new Date(y, m, 0).getDate();
+
+            if (d !== 15 && d !== ultimoDia) {
+                alert('Solo se permite el día 15 o el último día del mes');
+
+                // Forzar automáticamente al último día del mes
+                input.value = `${y}-${String(m).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            actualizarTotal();
+            filtrarPorFecha();
+        });
+
+        function actualizarTotal() {
+            let total = 0;
+
+            document.querySelectorAll('.prestamo-check').forEach(checkbox => {
+                if (checkbox.checked) {
+                    total += parseFloat(checkbox.dataset.debe);
+                }
+            });
+
+            document.getElementById('monto_a_saldar').textContent =
+                new Intl.NumberFormat('es-MX', {
+                    style: 'currency',
+                    currency: 'MXN'
+                }).format(total);
+
+            document.getElementById('monto_saldar').value = total.toFixed(2);
+        }
+
+        function obtenerSerieMinima(group) {
+            let min = null;
+
+            document
+                .querySelectorAll(`.prestamo-check[data-group="${group}"]:not(:disabled)`)
+                .forEach(cb => {
+                    let serie = parseInt(cb.dataset.serie);
+                    if (min === null || serie < min) {
+                        min = serie;
+                    }
+            });
+
+            return min;
+        }
+
+        function esSeleccionValida(group) {
+            let series = [];
+
+            document
+                .querySelectorAll(`.prestamo-check[data-group="${group}"]:checked:not(:disabled)`)
+                .forEach(cb => {
+                    series.push(parseInt(cb.dataset.serie));
+                });
+
+            if (series.length === 0) return true;
+
+            series.sort((a, b) => a - b);
+
+            let serieMinima = obtenerSerieMinima(group);
+
+            // ❌ Debe iniciar desde la primera serie pendiente
+            if (series[0] !== serieMinima) {
+                return false;
+            }
+
+            // ❌ Deben ser consecutivas
+            for (let i = 1; i < series.length; i++) {
+                if (series[i] !== series[i - 1] + 1) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function haySeleccionInvalida() {
+            let invalido = false;
+
+            $('.prestamo-check:checked').each(function () {
+                let group = $(this).data('group');
+
+                if (!esSeleccionValida(group)) {
+                    invalido = true;
+                    return false; // rompe el each
+                }
+            });
+
+            return invalido;
+        }
+
+        function filtrarPorFecha() {
+            let fechaSeleccionada = $('#fecha_ultimo_descuento').val();
+            if (!fechaSeleccionada) return;
+
+            let fechaBase = new Date(fechaSeleccionada + 'T00:00:00');
+
+            $('.prestamo-check').each(function () {
+                let fechaPago = $(this).data('fecha'); // YYYY-MM-DD
+                let fechaCheckbox = new Date(fechaPago + 'T00:00:00');
+
+                // ❌ Si el pago es menor o igual a la fecha seleccionada
+                if (fechaCheckbox <= fechaBase) {
+                    this.checked = false;
+                    this.disabled = true;
+                } else {
+                    this.disabled = false;
+                }
+            });
+            actualizarTotal();
+        }
+
         $(document).ready(function() {
+
+            // INICIOS DE DATATABLES
+            let table = $('#tabla-prestamos').DataTable({
+                paging: false,
+                ordering: false,
+                info: false,
+                searching: false,
+
+                rowGroup: {
+                    dataSrc: 1, // columna "Préstamo"
+                    startRender: function (rows, group) {
+
+                        let groupId = group.replace(/\s+/g, '_');
+
+                        return $('<tr/>')
+                            .append(`
+                                <td colspan="6">
+                                    <div class="form-check">
+                                        <input type="checkbox"
+                                            class="form-check-input select-group"
+                                            data-group="${groupId}">
+                                        <strong>${group}</strong>
+                                    </div>
+                                </td>
+                            `);
+                    }
+                },
+
+                columnDefs: [
+                    { targets: 1, visible: false }
+                ]
+            });
+
+            // Seleccionar / deseleccionar por grupo
+            $(document).on('change', '.select-group', function () {
+                let group = $(this).data('group');
+                let checked = this.checked;
+
+                if (!checked) {
+                    // Desmarcar todas las válidas
+                    $(`.prestamo-check[data-group="${group}"]`).prop('checked', false);
+                    actualizarTotal();
+                    return;
+                }
+
+                let serieMinima = obtenerSerieMinima(group);
+                let siguiente = serieMinima;
+
+                $(`.prestamo-check[data-group="${group}"]:not(:disabled)`).each(function () {
+                    let serie = parseInt($(this).data('serie'));
+
+                    if (serie === siguiente) {
+                        this.checked = true;
+                        siguiente++;
+                    } else {
+                        this.checked = false;
+                    }
+                });
+
+                actualizarTotal();
+            });
+
+            $(document).on('change', '.prestamo-check', function () {
+                if (this.disabled) {
+                    this.checked = false;
+                    return;
+                }
+
+                let group = $(this).data('group');
+
+                if (!esSeleccionValida(group)) {
+                    this.checked = false;
+
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selección inválida',
+                        text: 'Debe seleccionar los pagos desde la primera serie pendiente y en orden consecutivo.'
+                    });
+
+                    return;
+                }
+                actualizarTotal();
+            });
+
             let totalcapint = 0;
             let totalinteres = 0;
             let interesid = 0;
-            let saldoAvalar = false;
 
-            // Estilos para el select2 con BoostrapMD
-            // Inicializar Select2
-            $('#socios_id').select2({
-                placeholder: "-- Socios --",
-                allowClear: true,
-                minimumInputLength: 3,
-                width: '100%',
-            });
+            let totalcapint2 = 0;
+            let totalinteres2 = 0;
+            let interesid2 = 0;
 
-            // ACTIVA LA BUSQUEDA
-            $(document).on('select2:open', () => {
-                let allFound = document.querySelectorAll('.select2-container--open .select2-search__field');
-                $(this).one('mouseup keyup', () => {
-                    setTimeout(() => {
-                        allFound[allFound.length - 1].focus();
-                    }, 0);
-                });
-            });
+            // ACTIVA EL CTRL + P
+            //$("#imprimir").click(function() {
+            //    window.print();
+            //});
 
-            socios();
-
-            (function() {
-                'use strict';
-                // Fetch all the forms we want to apply custom Bootstrap validation styles to
-                const forms = document.querySelectorAll('.needs-validation');
-
-                // Loop over them and prevent submission
-                Array.prototype.slice.call(forms).forEach((form) => {
-                    form.addEventListener('submit', (event) => {
-                        if (!form.checkValidity()) {
-                            event.preventDefault();
-                            event.stopPropagation();
-
-                            // Mostrar los mensajes de validación nativos en los campos de entrada
-                            const inputs = form.querySelectorAll('input, select, textarea');
-                            Array.prototype.slice.call(inputs).forEach((input) => {
-                                const feedback = input.parentNode.querySelector(
-                                    '.invalid-feedback');
-                                if (input.validity.valueMissing) {
-                                    if (input.nodeName.toLowerCase() === 'select') {
-                                        const select = input;
-                                        if (select.value === '-1') {
-                                            console.log('puedo hacer esto 2');
-                                            feedback.textContent =
-                                                'Por favor, selecciona una opción.';
-                                        } else {
-                                            feedback.textContent =
-                                                'Please provide a valid input.';
-                                        }
-                                    } else {
-                                        feedback.textContent =
-                                            'Este campo es requerido.';
-                                    }
-                                }
-                                if (input.validity.valueMissing) {
-                                    feedback.textContent = 'Este campo es requerido.';
-                                } else if (input.validity.typeMismatch) {
-                                    feedback.textContent =
-                                        'Por favor, introduce un valor válido.';
-                                } else if (input.validity.tooShort) {
-                                    feedback.textContent =
-                                        'El valor es demasiado corto.';
-                                } else if (input.validity.rangeUnderflow) {
-                                    feedback.textContent =
-                                        'El valor es demasiado pequeño.';
-                                } else if (input.validity.rangeOverflow) {
-                                    feedback.textContent =
-                                        'El valor es demasiado grande.';
-                                } else if (input.validity.stepMismatch) {
-                                    feedback.textContent =
-                                        'Por favor, ajusta el valor según el paso.';
-                                }
-                                //else {
-                                //    feedback.textContent =
-                                //        'Ha ocurrido un error en este campo.';
-                                //}
-                                // Añade la validación específica para el select
-                                else if (input.nodeName.toLowerCase() === 'select' &&
-                                    input.validity.valueMissing) {
-                                    //console.log('entro');
-                                    feedback.textContent =
-                                        'Por favor, selecciona una opción.';
-                                }
-                            });
-                        }
-                        form.classList.add('was-validated');
-                        if ($('#socios_id').val() === '-1') {
-                            $('#socio_feedback').show();
-                        } else {
-                            $('#socio_feedback').hide();
-                        }
-                    }, false);
-                });
-            })();
-
-            // Inicializar los tooltips de MDBootstrap
-            /* $(function () {
-                 $('[data-mdb-toggle="tooltip"]').tooltip();
-             });*/
-
-            // SWEET ALERT
-            var submitBtn = document.getElementById('submitBtn');
-            var form = submitBtn.form;
-
-            // Agrega un evento click al botón de envío
-            submitBtn.addEventListener('click', function(event) {
-                // Prevenir el envío del formulario por defecto
-                if (form.checkValidity()) {
-                    event.preventDefault();
-                    //var disponibleSocio = $('#disponible_socio').val();
-                    var montoSocio = $('#monto_socio').val();
-                    var saldoSocio = $('#saldo_socio').val();
-                    var prestamoIntereses = $('#monto_prestamo').val(); //$('#prestamo_intereses').val();
-
-                    //var montoSocio = parseFloat(disponibleSocio.replace(/[^0-9.-]+/g,""));
-                    var montoPrestamo = $('#monto_prestamo').val();
-                    const tablaAval = document.querySelector('#tbl_aval');
-                    var faltanteAval = $('#total_faltane_avalar_text').val();
-                    //var totalFaltanteAval = parseFloat(faltanteAval.replace(/[^0-9.-]+/g,""));
-                    var totalFaltanteAval = $('#total_faltante_avalar_input').val();
-                    var sumaAvales = $('#suma_faltante_avalar').val();
-                    var totalFaltanteAvalar = $('#total_faltante_avalar_input').val();
-                    var socio_num_prestamo = $('#numero_prestamos').val();
-
-                    var apoyoAdicional = $('#apoyo_adicional').val();
-
-                    //console.log('faltanteAval :' + faltanteAval);
-                    //console.log('montoSocio :' + montoSocio);
-                    //console.log('saldoSocio :' + saldoSocio);
-                    //console.log('tabla: ' + tablaAval.rows.length);
-                    $('#socio_feedback').hide();
-                    switch (true) {
-                        case $('#fecha_primer_pago').val() === '':
-                            console.log('case 0');
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'La fecha del primer pago es requerido',
-                                text: 'Por favor elija una fecha.',
-                            });
-                            break;
-                        case $('#socios_id').val() === '-1' && apoyoAdicional == 0:
-                            console.log('case 1');
-                            $('#socio_feedback').show();
-                            break;
-                        case totalFaltanteAval > 0 && tablaAval.rows.length == 1 && apoyoAdicional == 0:
-                            console.log('case 2');
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'El prestamo excede su saldo disponible',
-                                text: 'Por favor elija un aval para obtener su prestamo.',
-                            });
-                            break;
-                        case parseFloat(saldoSocio) > parseFloat(prestamoIntereses) && apoyoAdicional == 0:
-                            console.log('case 3');
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'El SALDO SOCIO debe ser igual a la cantidad de PRESTAMO + INTERESES',
-                                text: 'Por favor verifique la información.',
-                            });
-                            break;
-                        case parseFloat(saldoSocio) == parseFloat(prestamoIntereses) && tablaAval.rows
-                        .length > 1 && apoyoAdicional == 0:
-                            console.log('case 4');
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'No es necesario incluir un aval',
-                                text: 'Por favor quite a los avales.',
-                            });
-                            break;
-                        case totalFaltanteAvalar < 0 && apoyoAdicional == 0:
-                            console.log('case 5');
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'El monto del aval excede el faltante por avalar',
-                                text: 'Por favor verifique la información.',
-                            });
-                            break;
-                        case totalFaltanteAvalar > 0 && apoyoAdicional == 0:
-                            console.log('case 6');
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'El monto del aval no cubre el faltante por avalar',
-                                text: 'Por favor verifique la información.',
-                            });
-                            break;
-                        /*
-                        case socio_num_prestamo == 3 && apoyoAdicional == 0:
-                            console.log('case 7');
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'El socio cuenta con 3 prestamos.',
-                                text: 'Por favor verifique la información.',
-                            });
-                            break;
-                        */
-
-                        case socio_num_prestamo == 3 && apoyoAdicional == 0:
-                            console.log('case 7');
-                            Swal.fire({
-                                title: 'El socio cuenta con 3 préstamos',
-                                html:
-                                    `<p>Para autorizar un préstamo adicional, se requiere la aprobación de un usuario con privilegios.</p>
-                                    <input id="auth_user" class="swal2-input" placeholder="Usuario">
-                                    <input id="auth_password" type="password" class="swal2-input" placeholder="Contraseña">`,
-                                confirmButtonText: 'Autorizar',
-                                showCancelButton: true,
-                                preConfirm: () => {
-                                    const email  = document.getElementById('auth_user').value;
-                                    const password = document.getElementById('auth_password').value;
-
-                                    if (!email  || !password) {
-                                        Swal.showValidationMessage('Debes ingresar usuario y contraseña');
-                                        return false;
-                                    }
-
-                                    // Aquí puedes hacer la petición AJAX para validar credenciales
-                                    return fetch('/autoriza/prestamo', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                                        },
-                                        body: JSON.stringify({ email, password })
-                                    })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (!data.autorizado) {
-                                            throw new Error('Usuario no autorizado');
-                                        }
-                                        return true;
-                                    })
-                                    .catch(error => {
-                                        Swal.showValidationMessage(`Error: ${error.message}`);
-                                    });
-                                }
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    // Continúa con el envío del formulario
-                                    $("#submitBtn").attr("disabled", true);
-                                    document.getElementById('form_prestamos').submit();
-                                }
-                            });
-                        break;
-
-                        default:
-                            $("#submitBtn").attr("disabled", true);
-                            document.getElementById('form_prestamos').submit();
-                            $("#submitBtn").attr("disabled", true);
-                            console.log('enviaria el formulario');
-                            break;
-                    }
-                } else {
-                    // Si el formulario no es válido, no prevengas el envío y deja que la validación nativa lo maneje
-                }
-
-            });
-
-            // CALENDARIO
-            const datepickerTranslated = document.querySelector('.datepicker-translated');
-            const filterFunction = (date) => {
-                const dayOfMonth = date.getDate();
-                const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-
-                // Permite la selección solo si es el día 15 o el último día del mes
-                return dayOfMonth === 15 || dayOfMonth === lastDayOfMonth;
-            }
-            new mdb.Datepicker(datepickerTranslated, {
-                confirmDateOnSelect: true,
-                disablePast: true,
-                title: 'Seleccione la fecha del primer pago',
-                monthsFull: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
-                    'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-                ],
-                monthsShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov',
-                    'Dic'
-                ],
-                weekdaysFull: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag',
-                    'Samstag'
-                ],
-                weekdaysShort: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'],
-                weekdaysNarrow: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
-                okBtnText: 'Ok',
-                clearBtnText: 'Limpiar',
-                cancelBtnText: 'Cancelar',
-                filter: filterFunction
-            });
-
-            // AJAX PARA OBTENER LOS DATOS DE LOS SOCIOS
-            $(document).on('change', '#socios_id', function() {
-                // OBTENGO LOS DATOS DEL SOCIO
-                if ($('#socios_id').val() === '-1') {
-                    $('#socio_feedback').show();
-                } else {
-                    $('#socio_feedback').hide();
-                }
-                $.ajax({
-                    url: "{{ route('detalle.socio.prestamo') }}",
-                    type: "POST",
-                    dataType: 'json',
-                    data: {
-                        "_token": "{{ csrf_token() }}",
-                        socios_id: $('#socios_id').val(),
-                    },
-                    success: function(response) {
-                        //console.log('success:', JSON.stringify(response));
-                        $(response).each(function(i, v) {
-                            var saldo = parseFloat(v.saldo);
-                            $('#fecha_alta').val(v.fecha_alta);
-                            $('#num_socio').val(v.num_socio);
-                            $('#numero_prestamos').val(v.numero_prestamos);
-                            $('#rfc').val(v.rfc);
-                            $('#saldo').val(formatToCurrency(saldo));
-                            $('#disponible_socio').val(formatToCurrency(v
-                                .saldo_disponible));
-                            //$('#saldo_socio').attr('max', parseFloat(v
-                            //    .saldo_disponible));
-                            $('#monto_socio').val(v.saldo_disponible);
-                            $('#disponible_aval').val(formatToCurrency(v
-                                .saldo *
-                                2));
-                            $('#monto_prestamo').attr('max', v.saldo_disponible * 2);
-                            //$('#saldo_socio').val(v
-                            //    .saldo_disponible);
-                            // genero el selec avales
-                            resetearSelect();
-                            avales(v.id, 'socios', 'all.socios');
-                        });
-                    },
-                    error: function(response) {
-                        console.log('error:', JSON.stringify(response));
-                    },
-                });
-
-                totalAvales();
-
-                // obtengo el monto de SALDO SOCIO
-                var prestamo_intereses = $('#monto_prestamo').val(); // lo cambiamos por monto prestamo $('#prestamo_intereses').val();
-                var disponible_socio = $('#disponible_socio').val();
-                var saldo_socio = $('#saldo_socio').val();
-
-                if (parseFloat(prestamo_intereses) <= parseFloat(disponible_socio)) {
-                    //console.log('1');
-                    saldo_socio = parseFloat(prestamo_intereses);
-                    $('#saldo_socio').val(saldo_socio);
-                } else if (parseFloat(prestamo_intereses) > parseFloat(disponible_socio)) {
-                    //console.log('2');
-                    saldo_socio = parseFloat(disponible_socio);
-                    $('#saldo_socio').val(saldo_socio);
-                }
-
-                // si esta activado el apoyo adicional reseteo los valores
-                if($('#apoyo_adicional').val() == 1){
-                    // si hay un registro en avales lo elimino
-                    const tablaAval = $('#tbl_aval'); //document.querySelector('#tbl_aval');
-                    if (tablaAval.find('tr').length > 1) {
-                        // Habilito el aval en el select de Socios
-                        const ultimaFila = tablaAval.find('tr:last');
-                        const idAvalInput = ultimaFila.find('input[name="idAval[]"]');
-                        const idAvalValue = idAvalInput.val();
-                        $("#socios_id option[value='" + idAvalValue + "']").prop("disabled",
-                            false);
-                        tablaAval.find('tr:last').remove();
-                        // COLOCAR LA FUNCION QUE MARQUE LO FALTANTE DE LOS AVALES
-                        totalAvales();
-                    }
-                    var checkbox = $("#apoyo_adicional");
-                    checkbox.prop("checked", false);
-                    checkbox.val(0);
-                }
-
-
-
-            });
-
-            // AJAX PARA OBTENER LOS DATOS DE LOS AVALES, GENERA TABLA
-            $(document).on('click', '#add_aval', function() {
-                var isAval = $('#is_aval').val();
-                var selectedOption = $('#aval_id').find("option:selected");
-                var tipoUsuario = selectedOption.attr("type-user");
-                var fullName = selectedOption.attr("full-name");
-                var socioId = $('#aval_id').val();
-
-                // OBTENGO LOS DATOS DEL SOCIO
-                if ($('#aval_id').val() > 0) {
-                    if (isAval == 3) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'El aval ha avalado 3 prestamos.',
-                            text: 'Por favor verifique la información.',
-                        });
-                    } else {
-                        if (tipoUsuario == 'SOCIO') {
-                            avales($('#aval_id').val(), 'aval', 'add.aval');
-                            // deshabilito el aval en el select de Socios
-                            var selectedValue = $("#aval_id").val();
-                            $("#socios_id option[value='" + selectedValue + "']").prop("disabled", true);
-                        } else {
-                            $('#socio').text(fullName);
-                            $('.modalSocio').val(fullName);
-                            $('.modalIdSocio').val(socioId);
-                            $('.modalContrasenia').modal({
-                                backdrop: 'static', // Para que el modal no se cierre haciendo clic fuera de él
-                                keyboard: false // Para que el modal no se cierre con la tecla Esc
-                            });
-
-                            $('.modalContrasenia').modal('show'); // Muestra el modal
-                        }
-                    }
-                }
-            });
-
-            // OBTENGO EL VALOR DE SALDO DISPONIBLE DEL AVAL
-            $(document).on('change', '#aval_id', function() {
-                var selectedOption = $(this).find("option:selected");
-                var saldo = selectedOption.attr("saldo");
-                var isAval = selectedOption.attr("isAval");
-                $("#saldo_disponible_aval").val(saldo);
-                $("#is_aval").val(isAval);
-
-            });
-
-            // SI HAY VALORES EN total prestamo Y plazos, se genera la tabla intereses
-            $(document).on('change', '.generaIntereses', function() {
-                if (($('#monto_prestamo').val() != '' && $('#monto_prestamo').val() > 0) && ($(
-                        '#total_quincenas').val() != '' && $('#total_quincenas').val() > 0)) {
-                    totalcapint = 0;
-                    totalinteres = 0;
-                    interesid = 0;
-                    tablainteresuno();
-                    tablainteresdos();
-                    pagoQuincenal();
-
-                    $('#apoyo_adicional').prop('disabled', false);
-
-                }
-
-                // obtengo el monto de SALDO SOCIO
-                var prestamo_intereses = $('#monto_prestamo').val(); // lo cambiamos por monto prestamo $('#prestamo_intereses').val();$('#prestamo_intereses').val();
-                var monto_socio = $('#monto_socio').val();
-                var saldo_socio = $('#saldo_socio').val();
-
-                if (parseFloat(prestamo_intereses) <= parseFloat(monto_socio)) {
-                    saldo_socio = parseFloat(prestamo_intereses);
-                    $('#saldo_socio').val(saldo_socio);
-                } else if (parseFloat(prestamo_intereses) > parseFloat(monto_socio)) {
-                    saldo_socio = parseFloat(monto_socio);
-                    $('#saldo_socio').val(saldo_socio);
-                }
-
-                if ($('#apoyo_adicional').val() == 1) {
-                    var monto_socio = parseFloat($('#monto_socio').val());
-                    var monto_prestamo = parseFloat($('#monto_prestamo').val());
-                    var nuevo_saldo = parseFloat( monto_prestamo - (monto_socio - 5000) );
-                    const tabla = $('#tbl_aval'); // Usamos jQuery para seleccionar la tabla
-                    const tbody = tabla.find('tbody');
-                    tabla.find('tr').each(function() {
-                        const idAvalInput = $(this).find('input[name="saldo_aval[]"]');
-                        const saldoAvalar = idAvalInput.val();
-                        idAvalInput.val(nuevo_saldo);
-                    });
-                }
-                totalAvales();
-            });
-
-            // CAMBIO EL TEXTO DE TOTAL AVALAR Y TOTAL FALTANTE
-            $(document).on('change', '.generaTotalAvalar', function() {
-                totalAvales();
-            });
-
-            // CAMBIA LOS VALORES SI HAY APOYO ADICIONAL
-            $(document).on('change', '#apoyo_adicional', function() {
-                if ($(this).is(':checked')) {
-                    $(this).val('1');
-                    var valorActual = parseFloat($('#monto_socio').val());
-                    var nuevoValor = valorActual + 5000;
-                    $('#disponible_socio').val(formatToCurrency(nuevoValor));
-                    $('#monto_socio').val(nuevoValor);
-                    $('#saldo_socio').val(nuevoValor);
-                    $('#monto_prestamo').attr('max', nuevoValor);
-                    //$('#prestamo_intereses').attr('max', nuevoValor);
-
-                    var nombreDelOption = "{{ auth()->user()->name }}";
-                    var selectedOption = $("#aval_id option:contains('" + nombreDelOption + "')");
-
-                    // Reseteamos la tabla de avales y habilitamos el socio
-                    const tabla = $('#tbl_aval'); // Usamos jQuery para seleccionar la tabla
-                    const tbody = tabla.find('tbody');
-                    tabla.find('tr').each(function() {
-                        // Obtener el valor del input "idAval[]"
-                        const idAvalInput = $(this).find('input[name="idAval[]"]');
-                        const idAvalValue = idAvalInput.val();
-                        // Habilitar el elemento en el select de Socios
-                        $("#socios_id option[value='" + idAvalValue + "']").prop("disabled", false);
-                    });
-                    tbody.empty();
-
-                    // Verificar si se encontró un elemento option que contiene el texto deseado
-                    if (selectedOption.length > 0) {
-                        var tipoUsuario = selectedOption.attr("type-user");
-                        var fullName = selectedOption.attr("full-name");
-                        var valorSeleccionado = selectedOption.val();
-
-                        $('#socio').text(fullName);
-                        $('.modalSocio').val(fullName);
-                        $('.modalIdSocio').val(valorSeleccionado);
-                        $('.modalContrasenia').modal({
-                            backdrop: 'static', // Para que el modal no se cierre haciendo clic fuera de él
-                            keyboard: false // Para que el modal no se cierre con la tecla Esc
-                        });
-
-                        $('.modalContrasenia').modal('show'); // Muestra el modal
-
-                    } else {
-                        console.log("No se encontró ninguna opción con el texto deseado.");
-                    }
-                } else {
-                    $(this).val('0');
-                    var valorActual = parseFloat($('#monto_socio').val());
-                    var nuevoValor = valorActual - 5000;
-                    $('#disponible_socio').val(formatToCurrency(nuevoValor));
-                    $('#monto_socio').val(nuevoValor);
-                    $('#saldo_socio').val(nuevoValor);
-                    $('#monto_prestamo').attr('max', nuevoValor);
-                    //$('#prestamo_intereses').attr('max', nuevoValor);
-                    $('#add_aval').prop("disabled", false);
-
-                    // si hay un registro en avales lo elimino
-                    const tablaAval = $('#tbl_aval'); //document.querySelector('#tbl_aval');
-                    if (tablaAval.find('tr').length > 1) {
-                        // Habilito el aval en el select de Socios
-                        const ultimaFila = tablaAval.find('tr:last');
-                        const idAvalInput = ultimaFila.find('input[name="idAval[]"]');
-                        const idAvalValue = idAvalInput.val();
-                        $("#socios_id option[value='" + idAvalValue + "']").prop("disabled",
-                            false);
-                        tablaAval.find('tr:last').remove();
-                        // COLOCAR LA FUNCION QUE MARQUE LO FALTANTE DE LOS AVALES
-                        totalAvales();
-                    }
-                }
-                totalAvales();
-            });
-
-
-            // Evitar entrada de datos en el campo al escribir
-            var inputPagoQuincenal = $('#pago_quincenal');
-            inputPagoQuincenal.on('keydown', function(e) {
+            // VALIDAR ANTES DE ENVIAR EL FORMULARIO
+            $('#form_pagar_prestamos').on('submit', function(e) {
                 e.preventDefault();
-            });
-            // Evitar entrada de datos en el campo al escribir
-            var inputPrestamosIntereses = $('#prestamo_intereses');
-            inputPrestamosIntereses.on('keydown',
-                function(e) {
-                    e.preventDefault();
-                });
-
-            // Envia la contraseña para validar el AVAL
-            $(document).on('click', '.btn-aprobar-aval', function() {
-                var aval = $('.modalSocio').val();
-                var password = $('.modalPassword').val();
-                var avalId = $('.modalIdSocio').val();
-                validaAval(aval, password, avalId)
-            });
-            // FUNCION PARA OBTENER LOS SOCIOS
-            /*
-            function socios(id, tipo, accion) {
-                //console.log('aval id: ' + id);
-                $.ajax({
-                    url: "{{ route('all.socios.prestamo') }}",
-                    type: "POST",
-                    dataType: 'json',
-                    data: {
-                        "_token": "{{ csrf_token() }}",
-                    },
-                    success: function(response) {
-                        //console.log('success:', JSON.stringify(response));
-                        // Recorrer los datos obtenidos y agregar opciones al select
-                        var select = $('#socios_id');
-                        $.each(response, function(index, socio) {
-                            var option = $('<option>', {
-                                value: socio.id,
-                                text: socio.nombre_completo,
-                                'data-mdb-secondary-text': 'RFC: ' + socio.rfc +
-                                    '. CUIP: ' + socio.cuip,
-                            });
-                            select.append(option);
-                        });
-                    },
-                    error: function(response) {
-                        console.log('error:', JSON.stringify(response));
-                    },
-                });
-            }
-            */
-
-            function socios() {
-                $('#socios_id').select2({
-                    placeholder: '-- Socios--',
-                    allowClear: true,
-                    minimumInputLength: 3,
-                    width: '100%',
-                    ajax: {
-                        url: "{{ route('all.socios.prestamo') }}", // Ruta de tu controlador
-                        type: "POST",
-                        dataType: 'json',
-                        delay: 250, // Retraso para evitar muchas solicitudes
-                        data: function(params) {
-                            return {
-                                search: params.term, // Término de búsqueda introducido por el usuario
-                                _token: "{{ csrf_token() }}" // Token CSRF para seguridad
-                            };
-                        },
-                        processResults: function(data) {
-                            console.log('data: '+ data);
-                            return {
-                                results: $.map(data, function(socio) {
-                                    return {
-                                        id: socio.id || '',
-                                        text: socio.nombre_completo || 'Sin nombre',
-                                        rfc: socio.rfc || 'N/A',
-                                        cuip: socio.cuip || 'N/A'
-                                    };
-                                })
-                            };
-                        },
-                        cache: true
-                    },
-                    //minimumInputLength: 3, // Mínimo de caracteres para iniciar la búsqueda
-                    language: {
-                        inputTooShort: function() {
-                            return 'Por favor, introduzca 3 o más caracteres';
-                        },
-                        noResults: function() {
-                            return "No se encontraron resultados";
-                        },
-                        searching: function() {
-                            return "Buscando...";
-                        }
-                    },
-                    escapeMarkup: function(markup) {
-                        return markup; // Permitir HTML en los resultados
-                    },
-                    templateResult: function(data) {
-                        // Renderizar cada opción con datos adicionales
-                        if (data.loading) {
-                            return data.text;
-                        }
-                        var markup = `
-                            <div>
-                                <strong>${data.text}</strong>
-                                <br>
-                                <small>RFC: ${data.rfc || 'N/A'} | CUIP: ${data.cuip || 'N/A'}</small>
-                            </div>`;
-                        return markup;
-                    },
-                    templateSelection: function(data) {
-                        // Mostrar solo el nombre seleccionado
-                        return data.text || '-- Socios--';
-                    }
-                });
-            }
-
-            // FUNCION PARA OBTENER LOS AVALES
-            function avales(id, tipo, accion) {
-                $('#saldo_disponible_aval').val('0');
-                $('#is_aval').val('0');
-                //console.log('aval id: ' + id);
-                $.ajax({
-                    url: "{{ route('detalle.aval.prestamo') }}",
-                    type: "POST",
-                    dataType: 'json',
-                    data: {
-                        "_token": "{{ csrf_token() }}",
-                        socios_id: id,
-                        tipo: tipo,
-                    },
-                    success: function(response) {
-                        //console.log('success:', JSON.stringify(response));
-                        // variable para el caso especial de aumento de 5,000
-                        var valorActual = parseFloat($('#monto_socio').val());
-                        var saldoReal = valorActual - 5000;
-                        var prestamo_interes = parseFloat($('#monto_prestamo').val()); //parseFloat($('#prestamo_intereses').val());
-                        let saldoAvalarAdicional = 0;
-
-                        var apoyoAdicional = $('#apoyo_adicional').val();
-
-                        if (apoyoAdicional == 1) {
-                            saldoAvalarAdicional = prestamo_interes - saldoReal;
-                        }
-
-                        if (accion == 'all.socios') {
-                            var select = $('#aval_id');
-                            select.empty(); // Vacía todas las opciones existentes
-                            //select.prop('required', true);
-                            var defaul =
-                                '<option value="" hidden selected>-- Avales --</option>';
-                            select.append(defaul);
-                        }
-
-                        $(response).each(function(i, v) {
-                            if (v.tipo == 'socios') {
-                                var saldo = parseFloat(v.saldo) + 500;
-                                var montoPrestamo = v.monto_prestamos;
-                                var saldoDisponible = parseFloat(saldo - montoPrestamo);
-
-                                var optionHtml = '<option value="' + v.id +
-                                    '" data-mdb-secondary-text="RFC: ' + v.rfc +
-                                    '. CUIP: ' + v
-                                    .cuip + '"saldo="' + saldoDisponible +
-                                    '" isAval="' + v.is_aval + '" type-user="' + v
-                                    .tipo_usuario + '" full-name="' + v.nombre_completo +
-                                    '" >' + v
-                                    .nombre_completo +
-                                    '</option>';
-                                select.append(
-                                    optionHtml); // Agrega la opción al select existente
-                            } else if (v.tipo == 'aval') {
-
-                            }
-                        });
-
-                        // Obtener una colección de filas en el cuerpo de la tabla
-                        // validar que no sea mayor a 3
-                        // validar que no se repita aval
-                        var tabla = document.getElementById('tbl_aval');
-                        var filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName(
-                            'tr');
-
-
-                        if (filas.length == 0) {
-
-                            if (accion == 'add.aval') {
-                                const tabla = document.getElementById('tbl_aval');
-                                const tbody = tabla.querySelector('tbody');
-
-                                // Recorre los registros y agrega una fila por cada uno
-                                const fila = document.createElement('tr');
-
-                                // Agrega celdas con los datos del registro
-                                const id = document.createElement('td');
-                                id.textContent = response.id;
-
-                                const idInput = document.createElement('input');
-                                idInput.type =
-                                    'hidden'; // Establecer el tipo de input como oculto
-                                idInput.name =
-                                    'idAval[]'; // Establecer el nombre del input (que se usará para enviar el valor al servidor)
-                                idInput.value = response.id; // Establecer el valor del input
-
-                                // Agregar el input al elemento fila (o a donde desees agregarlo)
-                                id.appendChild(idInput);
-                                fila.appendChild(id);
-
-                                const socio = document.createElement('td');
-                                socio.textContent = response.num_socio;
-                                fila.appendChild(socio);
-
-                                const name = document.createElement('td');
-                                name.textContent = response.nombre;
-                                fila.appendChild(name);
-
-                                const paterno = document.createElement('td');
-                                paterno.textContent = response.apellido_paterno;
-                                fila.appendChild(paterno);
-
-                                const materno = document.createElement('td');
-                                materno.textContent = response.apellido_materno;
-                                fila.appendChild(materno);
-
-                                const rfc = document.createElement('td');
-                                rfc.textContent = response.rfc;
-                                fila.appendChild(rfc);
-
-                                const ahorro = document.createElement('td');
-                                ahorro.textContent = response.saldo_disponible;
-                                fila.appendChild(ahorro);
-
-                                const cantidadAval = document.createElement('td');
-                                const inputValAval = document.createElement('input');
-                                inputValAval.name =
-                                    'saldo_aval[]';
-                                inputValAval.type =
-                                    'number'; // Puedes cambiar el tipo según tus necesidades
-                                inputValAval.value =
-                                    0; // Puedes establecer un valor inicial si es necesario
-                                inputValAval.classList.add('form-control',
-                                    'saldo_aval'); // agregar clases
-                                // Agregar atributos al input
-                                inputValAval.setAttribute('step', 'any');
-                                inputValAval.setAttribute('min', '1');
-                                inputValAval.setAttribute('max', parseFloat(ahorro
-                                    .textContent));
-                                inputValAval.required = true;
-
-                                if (apoyoAdicional == 1) {
-                                    //inputValAval.disabled = true;
-                                    //inputValAval.readonly = true;
-                                    inputValAval.setAttribute('readonly', 'true');
-                                    inputValAval.addEventListener('input', function(event) {
-                                        event.preventDefault(); // Evita que se introduzcan valores en el campo
-                                    });
-                                }
-
-                                inputValAval.setAttribute('data-identifier',
-                                    'uniqueIdentifier'); // Agregar un atributo personalizado
-
-                                cantidadAval.appendChild(inputValAval);
-
-                                // Asignamos el valor a avalr al input con nombre 'saldo_aval[]'
-                                inputValAval.value = saldoAvalarAdicional;
-
-                                fila.appendChild(cantidadAval);
-                                // Crea el div con el mensaje de error
-                                const divInvalidFeedback = document.createElement('div');
-                                divInvalidFeedback.classList.add('invalid-feedback');
-                                divInvalidFeedback.textContent =
-                                    'Please provide a valid input.';
-                                // Agrega el div después del input
-                                cantidadAval.appendChild(divInvalidFeedback);
-
-                                const elimina = document.createElement('td');
-                                const botonEliminar = document.createElement('button');
-                                botonEliminar.type = 'button';
-                                botonEliminar.name = 'remove';
-                                botonEliminar.className =
-                                    'btn btn-danger btn-fab btn-fab-mini btn-round remove';
-                                botonEliminar.innerHTML =
-                                    '<i class="material-icons far fa-trash-alt"></i>';
-
-                                if (apoyoAdicional == 1) {
-                                    botonEliminar.disabled = true;
-                                }
-
-                                elimina.appendChild(botonEliminar);
-                                fila.appendChild(elimina);
-
-                                // Agrega la fila a la tabla
-                                tbody.appendChild(fila);
-                            }
-                        } else if (filas.length > 0 && filas.length <= 20) {
-                            // compara si ya existe el aval, para no duplicarlo
-                            var exists = false;
-                            $('#tbl_aval tbody tr').each(function() {
-                                var tblId = $(this).find("td:eq(0)").text();
-                                if (tblId == id) {
-                                    exists = true;
-                                    return false; // Detener el bucle ya que se encontró una coincidencia
-                                }
-                            });
-                            if (!exists && accion == 'add.aval') {
-                                const tabla = document.getElementById('tbl_aval');
-                                const tbody = tabla.querySelector('tbody');
-
-                                // Recorre los registros y agrega una fila por cada uno
-                                const fila = document.createElement('tr');
-
-                                // Agrega celdas con los datos del registro
-                                const id = document.createElement('td');
-                                id.textContent = response.id;
-
-                                const idInput = document.createElement('input');
-                                idInput.type =
-                                    'hidden'; // Establecer el tipo de input como oculto
-                                idInput.name =
-                                    'idAval[]'; // Establecer el nombre del input (que se usará para enviar el valor al servidor)
-                                idInput.value = response.id; // Establecer el valor del input
-
-                                // Agregar el input al elemento fila (o a donde desees agregarlo)
-                                id.appendChild(idInput);
-                                fila.appendChild(id);
-
-                                const socio = document.createElement('td');
-                                socio.textContent = response.num_socio;
-                                fila.appendChild(socio);
-
-                                const name = document.createElement('td');
-                                name.textContent = response.nombre;
-                                fila.appendChild(name);
-
-                                const paterno = document.createElement('td');
-                                paterno.textContent = response.apellido_paterno;
-                                fila.appendChild(paterno);
-
-                                const materno = document.createElement('td');
-                                materno.textContent = response.apellido_materno;
-                                fila.appendChild(materno);
-
-                                const rfc = document.createElement('td');
-                                rfc.textContent = response.rfc;
-                                fila.appendChild(rfc);
-
-                                const ahorro = document.createElement('td');
-                                ahorro.textContent = response.saldo_disponible;
-                                fila.appendChild(ahorro);
-
-                                const cantidadAval = document.createElement('td');
-                                const inputValAval = document.createElement('input');
-                                inputValAval.name =
-                                    'saldo_aval[]';
-                                inputValAval.type =
-                                    'number'; // Puedes cambiar el tipo según tus necesidades
-                                inputValAval.value =
-                                    0; // Puedes establecer un valor inicial si es necesario
-                                inputValAval.classList.add('form-control',
-                                    'saldo_aval'); // agregar clases
-                                // Agregar atributos al input
-                                inputValAval.setAttribute('step', 'any');
-                                inputValAval.setAttribute('min', '1');
-                                inputValAval.setAttribute('max', parseFloat(ahorro
-                                    .textContent));
-                                inputValAval.required = true;
-
-                                cantidadAval.appendChild(inputValAval);
-                                fila.appendChild(cantidadAval);
-                                // Crea el div con el mensaje de error
-                                const divInvalidFeedback = document.createElement('div');
-                                divInvalidFeedback.classList.add('invalid-feedback');
-                                divInvalidFeedback.textContent =
-                                    'Please provide a valid input.';
-                                // Agrega el div después del input
-                                cantidadAval.appendChild(divInvalidFeedback);
-
-                                const elimina = document.createElement('td');
-                                const botonEliminar = document.createElement('button');
-                                botonEliminar.type = 'button';
-                                botonEliminar.name = 'remove';
-                                botonEliminar.className =
-                                    'btn btn-danger btn-fab btn-fab-mini btn-round remove';
-                                botonEliminar.innerHTML =
-                                    '<i class="material-icons far fa-trash-alt"></i>';
-
-                                elimina.appendChild(botonEliminar);
-                                fila.appendChild(elimina);
-
-                                // Agrega la fila a la tabla
-                                tbody.appendChild(fila);
-                            }
-                        }
-                        // para quitar un elemento de la tabla
-                        $('.remove').off().click(function(e) {
-                            $(this).parent('td').parent('tr').remove();
-                            // Habilito el aval en el select de Socios
-                            const idAvalInput = $(this).closest('tr').find(
-                                'input[name="idAval[]"]'
-                            ); // Obtiene el valor del input hidden
-                            const idAvalValue = idAvalInput.val();
-                            $("#socios_id option[value='" + idAvalValue + "']").prop(
-                                "disabled",
-                                false);
-                            // COLOCAR LA FUNCION QUE MARQUE LO FALTANTE DE LOS AVALES
-                            totalAvales();
-                        });
-                        // COLOCAR LA FUNCION QUE MARQUE LO FALTANTE DE LOS AVALES
-                        totalAvales();
-                    },
-                    error: function(response) {
-                        console.log('error:', JSON.stringify(response));
-                    },
-                });
-            }
-
-            // RESETEA LOS VALORES DEL SELECT AVALAES
-            function resetearSelect() {
-                var select = $('#aval_id');
-                select.empty(); // Vacía todas las opciones actuales
-                var defaul = '<option value="" hidden selected>-- Avales --</option>';
-                select.append(defaul);
-            }
-
-            // TOTAL AHORRO AVALES
-            function totalAvales() {
-                console.log('------ totalAvales -------')
-                var prestamoIntereses = $('#monto_prestamo').val();//$('#prestamo_intereses').val();
-                var saldoSocio = $('#saldo_socio').val();
-                var totalAvalar = parseFloat(prestamoIntereses - saldoSocio).toFixed(2);
-                var sumaSaldoAval = 0;
-                var faltanteAvalar = $("#total_avalar_input").val();
-
-                // PARA MOSTRAR EL TEXTO EN LA PARTE DE LA TABLA DE LOS AVALES
-                $("#total_avalar_input").val(totalAvalar);
-                $("#total_avalar_text").html("<strong>" + formatToCurrency2(totalAvalar) + "</strong>");
-                console.log('total_avalar_input 1: ' + totalAvalar);
-
-                // PONEMOS A 0 CUANDO ESTA HABILITADO EL APOYO ADICIONAL $5000
-                if ($('#apoyo_adicional').val() == 1) {
-                    //console.log('aqui1');
-                    //console.log('total_avalar_input 2: ' + 0);
-                    $("#total_avalar_input").val(0);
-                    $("#total_avalar_text").html("<strong>" + formatToCurrency2(0) + "</strong>");
-                    $("#total_faltante_avalar_input").val(0);
-                    //console.log('total_faltante_avalar_input 3: ' + 0);
-                    $("#total_faltane_avalar_text").html("<strong>" + formatToCurrency2(0) +
-                        "</strong>");
-                }
-
-                // obtengo la suma de los avales
-                const tablaAval = document.querySelector('#tbl_aval');
-
-                if (tablaAval.rows.length == 1) {
-                    $("#total_faltante_avalar_input").val(totalAvalar);
-                    //console.log('total_faltante_avalar_input 1: ' + totalAvalar);
-                    $("#total_faltane_avalar_text").html("<strong>" + formatToCurrency2(totalAvalar) +
-                        "</strong>");
-                } else {
-                    $('#tbl_aval tbody tr').each(function() {
-                        var $row = $(this);
-                        var saldoAval = parseFloat($row.find("td input.saldo_aval")
-                            .val()); // valor del input saldo_aval
-                        // Suma de los valores de los saldos_aval
-                        if (!isNaN(saldoAval)) {
-                            sumaSaldoAval += saldoAval;
-                        }
+                // VALIDACIÓN: series consecutivas
+                if (haySeleccionInvalida()) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selección inválida',
+                        text: 'Debe seleccionar los pagos desde la primera serie pendiente y en orden consecutivo.'
                     });
-                    if (sumaSaldoAval > 0) {
-                        saldoAvalar = true;
-                        // REAJUSTO LOS TOTALE EN CASO DE OBTENER DATOS DE LA TABLA AVALES
-                        $("#total_faltante_avalar_input").val(faltanteAvalar - sumaSaldoAval);
-                        //console.log('total_faltante_avalar_input 2: ' + (faltanteAvalar - sumaSaldoAval));
-                        $("#total_faltane_avalar_text").html("<strong>" + formatToCurrency2(faltanteAvalar -
-                            sumaSaldoAval) + "</strong>");
-                    }
+                    return;
                 }
-                if (sumaSaldoAval < 0) {
+
+                let saldo = parseFloat($('#saldo').val());
+                let debe = parseFloat($('#monto_saldar').val());
+                let fecha = $('#fecha_ultimo_descuento').val();
+                let formapago = $('#forma_pago').val();
+                let metodopago = $('#metodo_pago').val();
+                const FORMA_TRASLADO_AHORRO = 'LIQUIDACIÓN DE PRÉSTAMO - TRASLADO DE AHORRO';
+                const formaPagoTexto = $('#forma_pago option:selected').text().trim();
+
+                if (isNaN(saldo) || isNaN(debe) || debe <= 0 ) {
+                    //alert("Error: No se pudieron leer los valores de saldo o debe.");
+                    console.log('a');
                     Swal.fire({
                         icon: 'error',
-                        title: 'El sado de los avales excede la cantidad a avalar',
+                        title: 'No se pudieron leer los valores de saldo o debe.',
                         text: 'Por favor verifique la información.',
                     });
-                    // RESETEAMOS LOS VALORES DEL APOYO ADICIONAL $5000
-                    var checkbox = $("#apoyo_adicional");
-                    checkbox.prop("checked", false);
-                    checkbox.val(0);
-                    var valorActual = parseFloat($('#monto_socio').val());
-                    var nuevoValor = valorActual - 5000;
-                    $('#disponible_socio').val(formatToCurrency(nuevoValor));
-                    $('#monto_socio').val(nuevoValor);
-                    $('#saldo_socio').val(nuevoValor);
-                    $('#monto_prestamo').attr('max', nuevoValor);
-                    //$('#prestamo_intereses').attr('max', nuevoValor);
-                    $('#add_aval').prop("disabled", false);
+                    e.preventDefault(); // Evita el envío
+                    return;
+                }
 
-                    // Reseteamos la tabla de avales y habilitamos el socio
-                    const tabla = $('#tbl_aval'); // Usamos jQuery para seleccionar la tabla
-                    const tbody = tabla.find('tbody');
-                    tabla.find('tr').each(function() {
-                        // Obtener el valor del input "idAval[]"
-                        const idAvalInput = $(this).find('input[name="idAval[]"]');
-                        const idAvalValue = idAvalInput.val();
-                        // Habilitar el elemento en el select de Socios
-                        $("#socios_id option[value='" + idAvalValue + "']").prop("disabled", false);
+                /*
+                if (saldo < debe) {
+                    console.log('b');
+                    //alert("El saldo no puede ser menor al monto adeudado.");
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'El saldo no puede ser menor al monto adeudado.',
+                        text: 'Por favor verifique la información.',
                     });
-                    tbody.empty();
-                    //totalAvales();
+                    e.preventDefault(); // Evita el envío del formulario
+                }*/
 
-                } else if (sumaSaldoAval = faltanteAvalar) {
-                    saldoAvalar = false;
+                if (formaPagoTexto === 'LIQUIDACIÓN DE PRÉSTAMO - TRASLADO DE AHORRO' && saldo < debe) {
+                    console.log('b');
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Saldo insuficiente',
+                        text: 'Para la liquidación por traslado de ahorro, el saldo no puede ser menor al monto adeudado.',
+                    });
+                    return;
                 }
 
-                // PONEMOS A 0 CUANDO ESTA HABILITADO EL APOYO ADICIONAL $5000
-                if ($('#apoyo_adicional').val() == 1) {
-                    //console.log('aqui');
-                    //console.log('total_avalar_input 2: ' + 0);
-                    $("#total_avalar_input").val(0);
-                    $("#total_avalar_text").html("<strong>" + formatToCurrency2(0) + "</strong>");
-                    $("#total_faltante_avalar_input").val(0);
-                    //console.log('total_faltante_avalar_input 3: ' + 0);
-                    $("#total_faltane_avalar_text").html("<strong>" + formatToCurrency2(0) +
-                        "</strong>");
+                if(fecha == ''){
+                    console.log('c');
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Mensaje de error.',
+                        text: 'Por favor ingrese la fecha del último descuento.',
+                    });
+                    return;
                 }
-            }
 
-            // HACEMOS LA EVALUACION DEL SALDO FALTANTE, CUANDO SE INSERTA UN VALOR EN SALDO AVAL
-            $('#tbl_aval tbody').on('change', '.saldo_aval', function() {
-                totalAvales();
-            });
-            $('.saldo_aval').change(function() {
-                totalAvales();
-            });
-
-            // Escucha el clic en el botón con el atributo data-mdb-dismiss
-            $(document).on('click', '[data-mdb-dismiss="modal"]', function() {
-                //console.log('lksadfsdknflsnkdf');
-                // Cierra el modal
-                $(this).closest('.modal').modal('hide');
-                // RESETEA LOS VALORES AJUSTADOS PARA EL APOYO $5000
-                var checkbox = $("#apoyo_adicional");
-                checkbox.prop("checked", false);
-                checkbox.val(0);
-                var valorActual = parseFloat($('#monto_socio').val());
-                var nuevoValor = valorActual - 5000;
-                $('#disponible_socio').val(formatToCurrency(nuevoValor));
-                $('#monto_socio').val(nuevoValor);
-                $('#saldo_socio').val(nuevoValor);
-                $('#monto_prestamo').attr('max', nuevoValor);
-                //$('#prestamo_intereses').attr('max', nuevoValor);
-                $('#add_aval').prop("disabled", false);
-                totalAvales();
-            });
-
-
-            // Evita enviar el formulario al dar enter
-            $(document).on('keypress', 'input,select', function(e) {
-                if (e.which == 13) {
-                    e.preventDefault();
+                if(formapago == -1){
+                    console.log('d');
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Mensaje de error.',
+                        text: 'Por favor seleccione una forma de pago.',
+                    });
+                   return;
                 }
-            });
 
-            // funcion para generar la tabla intereses
-            function round(d) {
-                var dAbs = Math.abs(d);
-                var i = parseInt(dAbs);
-                var result = dAbs - i;
-                if (result < 0.001) {
-                    return d < 0 ? -i : i;
-                } else {
-                    return d < 0 ? -(i + 1) : i + 1;
+                if(metodopago == -1){
+                    console.log('d');
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Mensaje de error.',
+                        text: 'Por favor seleccione un método de pago.',
+                    });
+                    return;
                 }
-            }
 
-            // funcion para generar la tabla intereses
-            function round1(d) {
-                var dAbs = Math.abs(d);
-                var i = parseInt(dAbs);
-                var result = dAbs - i;
-                if (result < 0.5) {
-                    return d < 0 ? -i : i;
-                } else {
-                    return d < 0 ? -(i + 1) : i + 1;
+                // ✅ SI TODO ESTÁ BIEN → CONFIRMAR ENVÍO
+                const montoFormateado = new Intl.NumberFormat('es-MX', {
+                        style: 'currency',
+                        currency: 'MXN'
+                    }).format(debe);
+
+                const fechaDesk = $('#fecha_ultimo_descuento').val();
+                function formatearFecha(fecha) {
+                    const partes = fecha.split('-'); // yyyy-mm-dd
+                    return `${partes[2]}-${partes[1]}-${partes[0]}`; // dd-mm-yyyy
                 }
-            }
-            // GENRA LA PRIMERA TABLA DE LOS INTERESES
-            function tablainteresuno() {
-                $('#tabla-interesuno tbody').empty();
-                var montoprest = 0,
-                    mesesprest = 0,
-                    pagomonto = 0,
-                    interes = 0;
-                var pagomontored = 0,
-                    interesred = 0,
-                    capinter = 0,
-                    saldofinal = 0;
-                var a = 0;
 
-                montoprest = parseFloat($('#monto_prestamo').val());
-                mesesprest = parseInt($('#total_quincenas').val());
-                pagomonto = montoprest / mesesprest;
+                const fechaFormateada = formatearFecha(fechaDesk);
 
-                for (var i = 1; i <= mesesprest; i++) {
-                    if (montoprest >= pagomonto) {
-                        pagomontored = round(pagomonto);
-                        a = 1;
-                    } else {
-                        pagomontored = round(montoprest);
-                    }
+                Swal.fire({
+                    title: 'Confirmar operación',
+                    html: `
+                        <p>
+                            <b style="font-size: 22px; font-weight: bold;">ÚLTIMO DESCUENTO:</b>
+                            <span style="font-size: 22px; font-weight: bold;">
+                                ${fechaFormateada}
+                            </span>
+                        </p>
+                        <p><b>Monto a saldar:</b> ${montoFormateado}</p>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, pagar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // 🔥 ENVIAR FORMULARIO
+                        this.submit();
 
-                    interes = (montoprest / 100) * 1.5; // TASA DE INTERES
-                    interesred = round1(interes);
-                    capinter = pagomontored + interesred;
-                    totalinteres = totalinteres + interesred;
-                    totalcapint = totalcapint + capinter;
-                    saldofinal = parseInt(montoprest) - pagomontored;
-                    montoprest = saldofinal;
-
-                    var rowData = "<tr><td>" + i + "</td><td>" + pagomontored + "</td><td>" + interesred +
-                        "</td><td>" + (pagomontored + interesred) + "</td><td>" + saldofinal + "</td></tr>";
-                    $("#tabla-interesuno tbody").append(rowData);
-                }
-            }
-
-            function tablainteresdos() {
-                $('#tabla-interesdos tbody').empty();
-                var montoprest = 0,
-                    mesesprest = 0,
-                    pagouno = 0,
-                    pagouno1 = 0,
-                    capital = 0,
-                    saldofinald = 0;
-
-                montoprest = parseFloat($('#monto_prestamo').val());
-                mesesprest = parseInt($('#total_quincenas').val())
-                var primerIteracion = true;
-                var valorColumna4 = 0; // Variable para almacenar el valor de la columna 4
-                var valorAnteriorSaldofinald = 0;
-                var capitalAnterior = 0;
-
-                for (i = 1; i <= mesesprest; i++) {
-                    if (i == 1) {
-                        pagouno1 = totalcapint / mesesprest;
-                        var pagounost = pagouno1.toFixed(1);
-                        pagouno = parseFloat(pagounost);
-                        var primerElemento = $("#tabla-interesuno tbody tr").first();
-                        var interesado = primerElemento.find("td").eq(2).text();
-                        var interesValor = parseFloat(interesado);
-                        interesid += interesValor;
-                        capital = (totalcapint / mesesprest) - parseFloat(primerElemento.find("td").eq(2)
-                            .text());
-                        saldofinald = montoprest - capital;
-                        // creamos la tabla
-                        var newRow = "<tr><td>" + i + "</td><td>" + formatToCurrency(capital.toFixed(1)) +
-                            "</td><td>" +
-                            formatToCurrency(interesado) +
-                            "</td><td>" + formatToCurrency(pagouno.toFixed(1)) + "</td><td>" + formatToCurrency(
-                                saldofinald.toFixed(1)) +
-                            "</td></tr>";
-                        $("#tabla-interesdos tbody").append(newRow);
-                        capital = pagouno - interesid;
-                        valorColumna4 = saldofinald.toFixed(1);
-                    } else if (primerIteracion) {
-                        var interesid = 0;
-                        var contador = 2; // Empieza desde 2
-                        $("#tabla-interesuno tbody tr").slice(1).each(function() {
-                            var interesado = $(this).find("td").eq(2).text();
-                            var interesValor = parseFloat(interesado);
-                            interesid += interesValor;
-                            capital = (totalcapint / mesesprest) - $(this).find("td").eq(2).text();
-                            if (contador == 2) {
-                                saldofinald = valorColumna4 - capital;
-                                valorAnteriorSaldofinald = saldofinald;
-                            } else {
-                                saldofinald = valorAnteriorSaldofinald.toFixed(1) - capital.toFixed(
-                                    1);
-                                if (contador < mesesprest) {
-                                    capital = (totalcapint / mesesprest) - $(this).find("td").eq(2)
-                                        .text();
-                                } else if (contador == mesesprest) {
-                                    capital = valorAnteriorSaldofinald;
-                                    pagouno = parseFloat(capital) + parseFloat(interesado);
-                                    saldofinald = 0;
-                                }
-                            }
-                            // creamos la tabla
-                            var newRow = "<tr><td>" + contador + "</td><td>" + formatToCurrency(capital
-                                    .toFixed(1)) +
-                                "</td><td>" + formatToCurrency(interesado) +
-                                "</td><td>" + formatToCurrency(pagouno.toFixed(1)) + "</td><td>" +
-                                formatToCurrency(saldofinald
-                                    .toFixed(1)) +
-                                "</td></tr>";
-                            $("#tabla-interesdos tbody").append(newRow);
-                            valorAnteriorSaldofinald = saldofinald;
-                            capitalAnterior = capital.toFixed(1);
-                            contador++;
-                        });
-                        primerIteracion = false;
-                    }
-                }
-                // muestra el total a descontar por quincena
-                $('#pago_quincenal').val(pagouno.toFixed(1)).focus();
-                // muestra el monto total del prestamo + intereses
-                var prestamoIntereses = montoprest + totalinteres;
-                var disponibleAval = $('#disponible_aval').val();
-                var maxPrestamo = parseFloat(disponibleAval.replace(/[^0-9.-]+/g, ""));
-                $('#monto_prestamos').val(prestamoIntereses.toFixed(1));
-                $('#prestamo_intereses').val(prestamoIntereses.toFixed(1)).focus();
-                //$('#prestamo_intereses').attr('max', maxPrestamo.toFixed(1));
-                $('#total_quincenas').focus();
-            }
-
-            // Función para calcular los intereses
-            function calcularIntereses(monto) {
-                return Math.round(monto * 0.015);
-            }
-
-            // recorro la tabla para obtener el pago quincenal, es el de mayor importe
-            function pagoQuincenal() {                
-                // OBTENGO EL DESCUENTO MÁS REPETIDO
-                var ocurrencias = {}; // Objeto para almacenar las ocurrencias
-
-                // Recorre las filas de la tabla
-                $("#tabla-interesdos tbody tr").each(function() {
-                    var valor = $(this).find("td:eq(3)").text(); // Obtén el valor de la columna 3 (índice 2)
-
-                    // Actualiza las ocurrencias en el objeto
-                    if (ocurrencias[valor]) {
-                        ocurrencias[valor]++;
-                    } else {
-                        ocurrencias[valor] = 1;
+                        // Opcional: bloquear botón
+                        $('#submitBtn').prop('disabled', true);
                     }
                 });
+            });
 
-                // Encuentra el valor que se repite más
-                var valorMasRepetido = "";
-                var maxRepeticiones = 0;
+            //SELECT2
+            const $formaPago  = $('#forma_pago');
+            const $metodoPago = $('#metodo_pago');
 
-                for (var valor in ocurrencias) {
-                    if (ocurrencias[valor] > maxRepeticiones) {
-                        valorMasRepetido = valor;
-                        maxRepeticiones = ocurrencias[valor];
-                    }
+            // ⛔ DESHABILITAR select2 desde el inicio
+            $metodoPago.prop('disabled', true);
+            $metodoPago.val('-1').trigger('change');
+
+            function resetMetodoPago() {
+                $metodoPago.val('-1').trigger('change');
+
+                $metodoPago.find('option').prop('disabled', false);
+            }
+
+            $formaPago.on('change', function () {
+
+                const valor = $(this).val();
+
+                // ⛔ Si no selecciona nada válido, deshabilitar nuevamente
+                if (valor === '-1' || valor === null || valor === '') {
+                    $metodoPago.prop('disabled', true);
+                    resetMetodoPago();
+                    return;
                 }
-                var descuento = parseFloat(valorMasRepetido.replace(/\$/g, "").replace(",", ""));
-                $('#pago_quincenal').val(descuento.toFixed(1)).focus();
-                console.log('PAGO QUINCENAL: '+valorMasRepetido);
-            }
 
-            // FORMATO MONEDA
-            function formatToCurrency(data) {
-                return '$' + Intl.NumberFormat('es-MX', {
-                    minimumFractionDigits: 2,
-                }).format(data);
-            }
+                // ✅ HABILITAR select2
+                $metodoPago.prop('disabled', false);
+                resetMetodoPago();
 
-            function formatToCurrency2(data) {
-                return '$' + Intl.NumberFormat('es-MX', {
-                    minimumFractionDigits: 2,
-                    useGrouping: true, // Agrega comas como separadores de miles
-                }).format(data);
-            }
+                // 1️⃣ REESTRUCTURACIÓN → deshabilita traslado
+                if (valor === 'LIQUIDAR PRÉSTAMO - REESTRUCTURACIÓN' || valor === 'LIQUIDAR PRÉSTAMO - PAGO TOTAL') {
 
-            // ajax para validar la contraseña del aval
-            function validaAval(nameAval, pass, avalId) {
-                $("#errorPass").hide();
-                $.ajax({
-                    url: "{{ route('valida.aval') }}",
-                    type: "POST",
-                    dataType: 'json',
-                    data: {
-                        "_token": "{{ csrf_token() }}",
-                        aval: nameAval,
-                        pass: pass,
-                    },
-                    success: function(response) {
-                        //console.log('success:', JSON.stringify(response));
-                        if (response.estado === 'aprobado') {
-                            $('#passwordInput').val('');
-                            $(".modalContrasenia").modal('hide');
+                    $metodoPago
+                        .find('option[value="TRASLADO DE AHORRO"]')
+                        .prop('disabled', true);
+                }
 
-                            avales(avalId, 'aval', 'add.aval');
-                            // deshabilito el aval en el select de Socios
-                            var selectedValue = avalId;
-                            $("#socios_id option[value='" + selectedValue + "']").prop("disabled",
-                                true);
+                // 2️⃣ TRASLADO DE AHORRO → solo traslado
+                if (valor === 'LIQUIDAR PRÉSTAMO - TRASLADO DE AHORRO') {
 
-                            // si esta activado el apoyo adicional deshabilito agregar aval
-                            var checkbox = $("#apoyo_adicional");
-                            if (checkbox.val() == 1) {
-                                $('#add_aval').prop("disabled", true);
-                            }
+                    $metodoPago.find('option').each(function () {
+                        if (
+                            $(this).val() !== 'TRASLADO DE AHORRO' &&
+                            $(this).val() !== '-1'
+                        ) {
+                            $(this).prop('disabled', true);
                         }
+                    });
+                }
 
-                    },
-                    error: function(response) {
-                        //console.log('error:', JSON.stringify(response));
-                        if (response.responseJSON === 'invalido') {
-                            $("#errorPass").show();
-                        }
-                    },
-                });
-            }
+                // 🔄 refrescar Select2
+                $metodoPago.trigger('change.select2');
+            });
         });
     </script>
 
