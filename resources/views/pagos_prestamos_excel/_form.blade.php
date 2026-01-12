@@ -98,6 +98,7 @@
                             <div class="row mb-4">
                                 <div class="col-lg-12 col-md-12 col-sm-12">
                                     <div class="card-body table-responsive p-0">
+                                        <input type="hidden" name="pagos_json" id="pagos_json">
                                         <table id="tblOk"
                                             class="table table-striped table-hover dataTable dtr-inline display responsive nowrap">
                                             <thead>
@@ -455,27 +456,38 @@
                                     var serie_ok = response['serie-ok'];
                                     var html = '';
                                     var importe_total = 0; // 👈 inicializa
+                                    let pagosJson = []; // ← GLOBAL
 
                                     for (var i = 0; i < serie_ok.length; i++) {
                                         var item = serie_ok[i];
                                         if (item) {
+
+                                            // Guardar en JSON
+                                            pagosJson.push({
+                                                prestamos_id: item.prestamos_id,
+                                                socios_id: item.socios_id,
+                                                fecha_pago: item.fecha_pago,
+                                                fecha_captura: item.fecha_captura,
+                                                serie_pago: item.serie_pago,
+                                                serie_final: item.serie_final,
+                                                importe: item.importe
+                                            });
                                             //Sumar importe (forzar a número)
                                             importe_total += parseFloat(item.importe) || 0;
 
                                             html += '<tr>';
                                             html +=     '<td>';
                                             html +=         item.rfc;
-                                            html +=         '<input type="hidden" name="prestamos_id[]" value="'+item.prestamos_id+'">';
-                                            html +=         '<input type="hidden" name="socios_id[]" value="'+item.socios_id+'">';
-                                            html +=         '<input type="hidden" name="fecha_pago[]" value="'+item.fecha_pago+'">';
-                                            html +=         '<input type="hidden" name="fecha_captura[]" value="'+item.fecha_captura+'">';
-                                            html +=         '<input type="hidden" name="serie_pago[]" value="'+item.serie_pago+'">';
-                                            html +=         '<input type="hidden" name="serie_final[]" value="'+item.serie_final+'">';
-                                            html +=         '<input type="hidden" name="importe[]" value="'+item.importe+'">';
+                                            //html +=         '<input type="hidden" name="prestamos_id[]" value="'+item.prestamos_id+'">';
+                                            //html +=         '<input type="hidden" name="socios_id[]" value="'+item.socios_id+'">';
+                                            //html +=         '<input type="hidden" name="fecha_pago[]" value="'+item.fecha_pago+'">';
+                                            //html +=         '<input type="hidden" name="fecha_captura[]" value="'+item.fecha_captura+'">';
+                                            //html +=         '<input type="hidden" name="serie_pago[]" value="'+item.serie_pago+'">';
+                                            //html +=         '<input type="hidden" name="serie_final[]" value="'+item.serie_final+'">';
+                                            //html +=         '<input type="hidden" name="importe[]" value="'+item.importe+'">';
                                             html +=     '</td>';
                                             html +=     '<td>';
                                             html +=         item.nombre_completo;
-                                             html +=         'dsfgsdf';
                                             html +=     '</td>';
                                             html +=     '<td>';
                                             html +=         item.serie;
@@ -490,6 +502,7 @@
                                     $('#importe_total').text(formatToCurrency(importe_total));
 
                                     $('#body_details_tblOk').html(html);
+                                    $('#pagos_json').val(JSON.stringify(pagosJson));
                                     // Inicializa DataTable si es necesario
                                     if (!$.fn.dataTable.isDataTable('#tblOk')) {
                                         $('#tblOk').DataTable({

@@ -64,14 +64,35 @@ class PagosPrestamosController extends Controller
         try {
             \DB::beginTransaction();
             // OBTENEMOS LOS DATOS PARA ABONAR EL PRESTAMO
-            $datosFormulario = $request->all();
 
-            if (isset($datosFormulario['prestamos_id']) && count($datosFormulario['prestamos_id']) > 0) {
+            //$datosFormulario = $request->all();
 
-                foreach ($request->prestamos_id as $key => $value) {
+            //if (isset($datosFormulario['prestamos_id']) && count($datosFormulario['prestamos_id']) > 0) {
+
+             //    foreach ($request->prestamos_id as $key => $value) {
+
+             // 🔹 1. Decodificar JSON
+                $pagos = $request->pagos_json; //json_decode($request->pagos_json, true);
+
+                // 🔹 Si viene como string JSON, decodificar
+                if (is_string($pagos)) {
+                    $pagos = json_decode($pagos, true);
+                }
+
+                // 🔹 AHORA sí valida
+                if (!is_array($pagos) || empty($pagos)) {
+                    return back()->withErrors('No hay pagos para procesar');
+                }
+
+                foreach ($pagos as $item) {
+
+                    // 🔹 Variables base (ANTES eran arrays)
+                    $prestamosId = $item['prestamos_id'];
+                    $sociosId    = $item['socios_id'];
+                    $fechaPago   = $item['fecha_pago'];
 
                     //BUSCAMOS EL REGISTRO PARA REALIZAR EL ABONO
-                    $seriePendiente = PagosPrestamos::where('prestamos_id', $request->prestamos_id[$key])
+                    $seriePendiente = PagosPrestamos::where('prestamos_id', $prestamosId)
                         ->where('pagado', 0)
                         ->min('serie_pago');
 
@@ -79,7 +100,7 @@ class PagosPrestamosController extends Controller
                         continue; // ya no hay pagos pendientes
                     }
 
-                    $prestamoPago = PagosPrestamos::where('prestamos_id', $request->prestamos_id[$key])
+                    $prestamoPago = PagosPrestamos::where('prestamos_id', $prestamosId)
                         ->where('serie_pago', $seriePendiente)
                         ->where('pagado', 0)
                         ->first();
@@ -90,14 +111,14 @@ class PagosPrestamosController extends Controller
                         $idprestamoPago = $prestamoPago->id;
                         $prestamoPago->update([
                             'pagado' => 1,
-                            'fecha_pago' => $request->fecha_pago[$key],
+                            'fecha_pago' => $fechaPago,
                             'fecha_captura' => Carbon::now(),
                             'wci' => auth()->user()->id,
                         ]);
                     }
 
                     // BUSCAMOS SI EL PRESTAMO TIENE AVALES
-                    $avales = PrestamoDetalle::where('prestamos_id', '=', $request->prestamos_id[$key])
+                    $avales = PrestamoDetalle::where('prestamos_id', '=', $prestamosId)
                         ->where('debe', '>', 0)
                         ->get(['prestamo_detalles.*']);
 
@@ -185,7 +206,7 @@ class PagosPrestamosController extends Controller
                         // Calcula el capital restante después de los abonos a los avales
                         $capitalRestante = $prestamoPago->capital - $sumaAbonosAval;
                         if ($capitalRestante > 0) {
-                            $rowPrestamo = Prestamos::findorfail($request->prestamos_id[$key]);
+                            $rowPrestamo = Prestamos::findorfail($prestamosId);
                             $interes = 0;//$rowPrestamo->total_intereses / $rowPrestamo->total_quincenas;
 
                             // ACTUALIZAMOS LOS VALORES DEL PRESTAMO
@@ -208,18 +229,18 @@ class PagosPrestamosController extends Controller
                             if ($capitalRestante > 0) {
                                 PagosPrestamosDetalles::create([
                                     'pagos_prestamos_id' => $idprestamoPago,
-                                    'prestamos_id' => $request->prestamos_id[$key],
-                                    'socios_id' => $request->socios_id[$key],
+                                    'prestamos_id' => $prestamosId,
+                                    'socios_id' => $sociosId,
                                     'tipo_cliente' => 'SOCIO',
                                     'abona' => $capitalRestante,
                                     'wci' => auth()->user()->id,
                                 ]);
 
                                 // MODIFICAMOS LA TABLA SOCIOS PARA EL MONTO_PRESTAMO
-                                $socio = Socios::find($request->socios_id[$key]);
+                                $socio = Socios::find($sociosId);
                                 // INSERTAMOS EL MOVIMIENTO
                                 $movimiento = $rowPrestamo->movimientos()->create([
-                                    'socios_id'       => $request->socios_id[$key],
+                                    'socios_id'       => $sociosId,
                                     'fecha'           => Carbon::now(),
                                     'folio'           => 'MOV-',
                                     'saldo_anterior'  => $socio->saldo,
@@ -248,7 +269,7 @@ class PagosPrestamosController extends Controller
 
                         // ABONO DEL CLIENTE SIN AVAL
                         //$abonoAval = $prestamoPago->capital;
-                        $rowPrestamo = Prestamos::findorfail($request->prestamos_id[$key]);
+                        $rowPrestamo = Prestamos::findorfail($prestamosId);
                         $interes = 0; //$rowPrestamo->total_intereses / $rowPrestamo->total_quincenas;
 
                         // Restante disponible para abonar al aval
@@ -286,7 +307,7 @@ class PagosPrestamosController extends Controller
                         if ($abonoRealDescuento > 0) {
                             PagosPrestamosDetalles::create([
                                 'pagos_prestamos_id' => $idprestamoPago,
-                                'prestamos_id' => $request->prestamos_id[$key],
+                                'prestamos_id' => $prestamosId,
                                 'socios_id' => $rowPrestamo->socios_id,
                                 'tipo_cliente' => 'SOCIO',
                                 'abona' => $abonoRealDescuento,//$abonoReal,
@@ -297,7 +318,7 @@ class PagosPrestamosController extends Controller
                             $socio = Socios::find($rowPrestamo->socios_id);
                             // INSERTAMOS EL MOVIMIENTO
                             $movimiento = $rowPrestamo->movimientos()->create([
-                                'socios_id'       => $request->socios_id[$key],
+                                'socios_id'       => $sociosId,
                                 'fecha'           => Carbon::now(),
                                 'folio'           => 'MOV-',
                                 'saldo_anterior'  => $socio->saldo,
@@ -321,7 +342,15 @@ class PagosPrestamosController extends Controller
                 }
 
                 // ACTUALIZAMOS LA SERIE DEL PRESTAMO
-                foreach ($request->prestamos_id as $prestamoId) {
+                //foreach ($request->prestamos_id as $prestamoId) {
+                //    $this->recalcularSeriePrestamo($prestamoId);
+                //}
+
+                $prestamosProcesados = collect($pagos)
+                    ->pluck('prestamos_id')
+                    ->unique();
+
+                foreach ($prestamosProcesados as $prestamoId) {
                     $this->recalcularSeriePrestamo($prestamoId);
                 }
 
@@ -352,7 +381,7 @@ class PagosPrestamosController extends Controller
                         'proximo_pago' => $nuevaFecha,
                     ]);
                 }
-            }
+            //}
             \DB::commit();
             return redirect()->route('admin.socios.index')->with(['correcto' => 'success']);
         } catch (Exception $e) {
@@ -375,9 +404,9 @@ class PagosPrestamosController extends Controller
             if (isset($datosFormulario['prestamos_id']) && count($datosFormulario['prestamos_id']) > 0) {
                 foreach ($request->prestamos_id as $key => $value) {
                     $prestamoPago = new PagosPrestamos();
-                    $prestamoPago->prestamos_id = $request->prestamos_id[$key];
-                    $prestamoPago->socios_id = $request->socios_id[$key];
-                    $prestamoPago->fecha_pago = $request->fecha_pago[$key];
+                    $prestamoPago->prestamos_id = $prestamosId;
+                    $prestamoPago->socios_id = $sociosId;
+                    $prestamoPago->fecha_pago = $fechaPago;
                     $prestamoPago->fecha_captura = Carbon::now();
                     $prestamoPago->serie_pago = $request->serie_pago[$key];
                     $prestamoPago->serie_final = $request->serie_final[$key];
@@ -387,7 +416,7 @@ class PagosPrestamosController extends Controller
                     $idprestamoPago = $prestamoPago->id;
 
                     // BUSCAMOS SI EL PRESTAMO TIENE AVALES
-                    $avales = PrestamoDetalle::where('prestamos_id', '=', $request->prestamos_id[$key])
+                    $avales = PrestamoDetalle::where('prestamos_id', '=', $prestamosId)
                         ->where('debe', '>', 0)
                         //->whereRaw('debe > 0')
                         ->get(['prestamo_detalles.*']);
@@ -466,7 +495,7 @@ class PagosPrestamosController extends Controller
                         // Calcula el capital restante después de los abonos a los avales
                         $capitalRestante = $request->importe[$key] - $sumaAbonosAval;
                         if ($capitalRestante > 0) {
-                            $rowPrestamo = Prestamos::findorfail($request->prestamos_id[$key]);
+                            $rowPrestamo = Prestamos::findorfail($prestamosId);
                             $interes = $rowPrestamo->total_intereses / $rowPrestamo->total_quincenas;
 
                             // ACTUALIZAMOS LOS VALORES DEL PRESTAMO
@@ -489,20 +518,20 @@ class PagosPrestamosController extends Controller
                             if ($capitalRestante > 0) {
                                 PagosPrestamosDetalles::create([
                                     'pagos_prestamos_id' => $idprestamoPago,
-                                    'prestamos_id' => $request->prestamos_id[$key],
-                                    'socios_id' => $request->socios_id[$key],
+                                    'prestamos_id' => $prestamosId,
+                                    'socios_id' => $sociosId,
                                     'tipo_cliente' => 'SOCIO',
                                     'abona' => $capitalRestante,
                                     'wci' => auth()->user()->id,
                                 ]);
 
                                 // MODIFICAMOS LA TABLA SOCIOS PARA EL MONTO_PRESTAMO
-                                $socio = Socios::find($request->socios_id[$key]);
+                                $socio = Socios::find($sociosId);
                                 // INSERTAMOS EL MOVIMIENTO
                                 $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
                                 $nextId = $lastInsertedId + 1;
                                 Movimiento::create([
-                                    'socios_id' => $request->socios_id[$key],
+                                    'socios_id' => $sociosId,
                                     'fecha' => Carbon::now(),
                                     'folio' => 'MOV-' . $nextId,
                                     'saldo_anterior' => $socio->saldo,
@@ -520,7 +549,7 @@ class PagosPrestamosController extends Controller
                     } else {
                         // ABONO DEL CLIENTE SIN AVAL
                         $abonoAval = $request->importe[$key];
-                        $rowPrestamo = Prestamos::findorfail($request->prestamos_id[$key]);
+                        $rowPrestamo = Prestamos::findorfail($prestamosId);
                         $interes = $rowPrestamo->total_intereses / $rowPrestamo->total_quincenas;
 
                         // Restante disponible para abonar al aval
@@ -550,7 +579,7 @@ class PagosPrestamosController extends Controller
                         if ($abonoReal > 0) {
                             PagosPrestamosDetalles::create([
                                 'pagos_prestamos_id' => $idprestamoPago,
-                                'prestamos_id' => $request->prestamos_id[$key],
+                                'prestamos_id' => $prestamosId,
                                 'socios_id' => $rowPrestamo->socios_id,
                                 'tipo_cliente' => 'SOCIO',
                                 'abona' => $abonoReal,
@@ -563,7 +592,7 @@ class PagosPrestamosController extends Controller
                             $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
                             $nextId = $lastInsertedId + 1;
                             Movimiento::create([
-                                'socios_id' => $request->socios_id[$key],
+                                'socios_id' => $sociosId,
                                 'fecha' => Carbon::now(),
                                 'folio' => 'MOV-' . $nextId,
                                 'saldo_anterior' => $socio->saldo,
@@ -582,7 +611,7 @@ class PagosPrestamosController extends Controller
 
                 // ACTUALIZAMOS LA SERIE DEL PRESTAMO
                 foreach ($request->prestamos_id as $key => $value) {
-                    $prestamoSerie = Prestamos::findorfail($request->prestamos_id[$key]);
+                    $prestamoSerie = Prestamos::findorfail($prestamosId);
                     $prestamoSerie->update([
                         'serie' => $prestamoSerie->serie +1
                     ]);
