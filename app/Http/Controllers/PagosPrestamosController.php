@@ -88,7 +88,6 @@ class PagosPrestamosController extends Controller
                     if ($prestamoPago) {
 
                         $idprestamoPago = $prestamoPago->id;
-
                         $prestamoPago->update([
                             'pagado' => 1,
                             'fecha_pago' => $request->fecha_pago[$key],
@@ -106,6 +105,7 @@ class PagosPrestamosController extends Controller
 
                         $totalAvales = $avales->count();
                         $abonoAval = $prestamoPago->capital / $totalAvales;
+                        $abonoAvalIntereses = $prestamoPago->interes / $totalAvales;
                         $sumaAbonosAval = 0;
                         foreach ($avales as $row) {
                             //ABONAMOS AL AVAL
@@ -131,29 +131,14 @@ class PagosPrestamosController extends Controller
                             ]);
 
                             // ACTUALIZAMOS LOS VALORES DEL PRESTAMO
-                            $rowPrestamo->abona = $rowPrestamo->abona + $abonoReal; // Suma el abono al 'abona' existente
-                            $rowPrestamo->debe = $rowPrestamo->debe - $abonoReal; // Resta el abono de 'debe'
+                            $rowPrestamo->abona = $rowPrestamo->abona + $abonoReal + $abonoAvalIntereses; // Suma el abono al 'abona' existente
+                            $rowPrestamo->debe = $rowPrestamo->debe - ($abonoReal + $abonoAvalIntereses); // Resta el abono de 'debe'
                             $rowPrestamo->save();
 
                             // MODIFICAMOS LA TABLA SOCIOS PARA EL MONTO_PRESTAMO
                             $aval = Socios::find($row->socios_id);
 
                             // INSERTAMOS EL MOVIMIENTO
-                            $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
-                            $nextId = $lastInsertedId + 1;
-                            /*Movimiento::create([
-                                'socios_id' => $row->socios_id,
-                                'fecha' => Carbon::now(),
-                                'folio' => 'MOV-' . $nextId,
-                                'saldo_anterior' => $aval->saldo,
-                                'saldo_actual' => $aval->saldo,
-                                'monto' => $abonoReal,
-                                'movimiento' => 'PAGO PRÉSTAMO',
-                                'tipo_movimiento' => 'ABONO',
-                                'metodo_pago' => 'EFECTIVO',
-                                'estatus' => 'EFECTUADO',
-                            ]);*/
-
                             $movimiento = $rowPrestamo->movimientos()->create([
                                 'socios_id'       => $row->socios_id,
                                 'fecha'           => Carbon::now(),
@@ -233,20 +218,6 @@ class PagosPrestamosController extends Controller
                                 // MODIFICAMOS LA TABLA SOCIOS PARA EL MONTO_PRESTAMO
                                 $socio = Socios::find($request->socios_id[$key]);
                                 // INSERTAMOS EL MOVIMIENTO
-                                $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
-                                $nextId = $lastInsertedId + 1;
-                                /*Movimiento::create([
-                                    'socios_id' => $request->socios_id[$key],
-                                    'fecha' => Carbon::now(),
-                                    'folio' => 'MOV-' . $nextId,
-                                    'saldo_anterior' => $socio->saldo,
-                                    'saldo_actual' => $socio->saldo,
-                                    'monto' => $capitalRestante,
-                                    'movimiento' => 'PAGO PRÉSTAMO',
-                                    'tipo_movimiento' => 'ABONO',
-                                    'metodo_pago' => 'EFECTIVO',
-                                    'estatus' => 'EFECTUADO',
-                                ]);*/
                                 $movimiento = $rowPrestamo->movimientos()->create([
                                     'socios_id'       => $request->socios_id[$key],
                                     'fecha'           => Carbon::now(),
@@ -325,21 +296,6 @@ class PagosPrestamosController extends Controller
                             // MODIFICAMOS LA TABLA SOCIOS PARA EL MONTO_PRESTAMO
                             $socio = Socios::find($rowPrestamo->socios_id);
                             // INSERTAMOS EL MOVIMIENTO
-                            $lastInsertedId = Movimiento::orderBy('id', 'desc')->first()->id ?? 0;
-                            $nextId = $lastInsertedId + 1;
-                            /*Movimiento::create([
-                                'socios_id' => $request->socios_id[$key],
-                                'fecha' => Carbon::now(),
-                                'folio' => 'MOV-' . $nextId,
-                                'saldo_anterior' => $socio->saldo,
-                                'saldo_actual' => $socio->saldo,// - $abonoRealDescuento,
-                                'monto' => $abonoRealDescuento,//$abonoReal,
-                                'movimiento' => 'PAGO PRÉSTAMO',
-                                'tipo_movimiento' => 'ABONO',
-                                'metodo_pago' => 'EFECTIVO',
-                                'estatus' => 'EFECTUADO',
-                            ]);*/
-
                             $movimiento = $rowPrestamo->movimientos()->create([
                                 'socios_id'       => $request->socios_id[$key],
                                 'fecha'           => Carbon::now(),
@@ -883,7 +839,9 @@ class PagosPrestamosController extends Controller
                 ];
                 $allSerieOk[] = $serieOk;
                 // Suma al total
-                $totalImporte += $row->pago_quincenal;
+                //$totalImporte += $row->pago_quincenal;
+
+                $totalImporte += (float) $row->pago_quincenal;
             }
 
             return response()->json(

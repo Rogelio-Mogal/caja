@@ -57,8 +57,9 @@
                                                                 </a>
                                                             </li>
                                                             <li>
-                                                                <button type="button" class="dropdown-item show_modal_cancelar"
-                                                                    data-id="{{ $pagos->id }}">
+                                                                <button type="button" class="dropdown-item btn-cancelar-pago"
+                                                                    data-id="{{ $pagos->id }}"
+                                                                    data-url="{{ route('admin.pagar.prestamo.destroy', $pagos->id) }}">
                                                                     Cancelar
                                                                 </button>
                                                             </li>
@@ -104,7 +105,70 @@
 
 @section('js')
     <script>
+        // CANCELA EL PAGO LIQUIDADO POR ADELANTADO
+        $(document).on('click', '.btn-cancelar-pago', function () {
+            console.log('sdfsdf');
+            let btn = $(this);
+            let prestamoId = btn.data('id');
+            let url = btn.data('url');
 
+            Swal.fire({
+                title: '¿Cancelar este pago?',
+                text: 'Esta acción revertirá los pagos adelantados.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, cancelar',
+                cancelButtonText: 'No',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#aaa',
+            }).then((result) => {
+
+                if (result.isConfirmed) {
+
+                    // 🔒 Deshabilita botón
+                    btn.prop('disabled', true);
+
+                    Swal.fire({
+                        title: 'Procesando...',
+                        text: 'Revirtiendo pagos adelantados',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();   // ⏳ Loader
+                        }
+                    });
+
+                    $.ajax({
+                        url: url,
+                        type: 'DELETE',
+                        data: {
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function (response) {
+
+                            Swal.fire(
+                                'Cancelado',
+                                response.mensaje,
+                                'success'
+                            ).then(() => {
+                                location.reload();
+                            });
+                        },
+                        error: function (xhr) {
+
+                            // 🔓 Rehabilita botón si falla
+                            btn.prop('disabled', false);
+
+                            Swal.fire(
+                                'Error',
+                                xhr.responseJSON?.mensaje || 'Ocurrió un error.',
+                                'error'
+                            );
+                        }
+                    });
+                }
+            });
+        });
         $(document).ready(function() {
             $('#tbl_pagos').DataTable({
                 "language": {

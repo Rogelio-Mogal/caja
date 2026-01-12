@@ -217,7 +217,7 @@
                                                 <input class="form-check-input prestamo-check"
                                                     type="checkbox"
                                                     name="prestamos_id[]"
-                                                    value="{{ $row->pago_id }}"
+                                                    value="{{ $row->id }}"
                                                     data-debe="{{ $row->capital }}"
                                                     data-group="{{ str_replace(' ', '_', $row->numero_prestamo) }}"
                                                     data-serie="{{ $row->serie_pago }}"

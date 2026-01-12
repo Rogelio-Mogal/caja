@@ -449,14 +449,19 @@
 
                                 // OBTENGO LAS SERIES CORRECTAS
                                 if (response.result === "success" && response['serie-ok']) {
-                                    var importe_total = response['importe_total'];
-                                    $('#importe_total').text(formatToCurrency(importe_total));
-                                    console.log('importe_total: '+importe_total);
+                                    //var importe_total = response['importe_total'];
+                                    //$('#importe_total').text(formatToCurrency(importe_total));
+
                                     var serie_ok = response['serie-ok'];
                                     var html = '';
+                                    var importe_total = 0; // 👈 inicializa
+
                                     for (var i = 0; i < serie_ok.length; i++) {
                                         var item = serie_ok[i];
                                         if (item) {
+                                            //Sumar importe (forzar a número)
+                                            importe_total += parseFloat(item.importe) || 0;
+
                                             html += '<tr>';
                                             html +=     '<td>';
                                             html +=         item.rfc;
@@ -470,6 +475,7 @@
                                             html +=     '</td>';
                                             html +=     '<td>';
                                             html +=         item.nombre_completo;
+                                             html +=         'dsfgsdf';
                                             html +=     '</td>';
                                             html +=     '<td>';
                                             html +=         item.serie;
@@ -480,6 +486,9 @@
                                             html += '</tr>';
                                         }
                                     }
+                                    // Mostrar total
+                                    $('#importe_total').text(formatToCurrency(importe_total));
+
                                     $('#body_details_tblOk').html(html);
                                     // Inicializa DataTable si es necesario
                                     if (!$.fn.dataTable.isDataTable('#tblOk')) {

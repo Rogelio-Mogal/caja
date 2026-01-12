@@ -492,26 +492,36 @@ class PagarPrestamoController extends Controller
 
     public function store(Request $request)
     {
-        $resultado = $this->procesarPagoPrestamos($request);
+        DB::beginTransaction();
+        try {
+            
+            $resultado = $this->procesarPagoPrestamos($request);
 
-        if (!$resultado['ok']) {
-            return redirect()->back()
-                ->with('error', $resultado['mensaje'])
-                ->withInput();
+            if (!$resultado['ok']) {
+                DB::rollBack();
+
+                return redirect()->back()
+                    ->with('error', $resultado['mensaje'])
+                    ->withInput();
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.pagar.prestamo.index')
+                ->with([
+                    'id' => $resultado['socio_id'],
+                    'prestamos_ids' => $resultado['prestamos_ids']
+                ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
         }
-
-        return redirect()
-            ->route('admin.pagar.prestamo.index')
-            ->with([
-                'id' => $resultado['socio_id'],
-                'prestamos_ids' => $resultado['prestamos_ids']
-            ]);
     }
-
 
     private function procesarPagoPrestamos(Request $request)
     {
-        try {
+        //try {
 
             $pagosIds = $request->prestamos_id ?? [];
 
@@ -582,7 +592,7 @@ class PagarPrestamoController extends Controller
             | TRANSACCIÓN
             ====================================================== */
 
-            \DB::beginTransaction();
+            //\DB::beginTransaction();
 
             $socioID = $request->socios_id;
             $datosFormulario = $request->all();
@@ -726,7 +736,7 @@ class PagarPrestamoController extends Controller
                                 'prestamos_id'       => $prestamo->id,
                                 'socios_id'          => $prestamo->socios_id,
                                 'tipo_cliente'       => 'SOCIO',
-                                'abona'              => $capitalRestante + $interes,
+                                'abona'              => $capitalRestante, //$capitalRestante + $interes,
                                 'es_adelantado'      => $esAdelantado,
                                 'es_reversion'       => 0,
                                 'reversion_de'       => null,
@@ -741,8 +751,8 @@ class PagarPrestamoController extends Controller
                                 'fecha'           => now(),
                                 'folio'           => 'MOV-',
                                 'saldo_anterior'  => $socio->saldo,
-                                'saldo_actual'    => $socio->saldo - ($capitalRestante + $interes),
-                                'monto'           => $capitalRestante + $interes,
+                                'saldo_actual'    => $socio->saldo - ($capitalRestante), // $socio->saldo - ($capitalRestante + $interes),
+                                'monto'           => $capitalRestante, //$capitalRestante + $interes,
                                 'movimiento'      => 'PAGO PRÉSTAMO -AVAL-',
                                 'tipo_movimiento' => 'ABONO',
                                 'metodo_pago'     => 'EFECTIVO',
@@ -894,7 +904,7 @@ class PagarPrestamoController extends Controller
                 }
             }
 
-            \DB::commit();
+            //\DB::commit();
 
             return [
                 'ok' => true,
@@ -902,22 +912,22 @@ class PagarPrestamoController extends Controller
                 'prestamos_ids' => $prestamosIds
             ];
 
-        } catch (\Exception $e) {
-            \DB::rollBack();
+        //} catch (\Exception $e) {
+        //    \DB::rollBack();
 
-            return [
-                'ok' => false,
-                'redirect' => false,
-                'mensaje' => $e->getMessage()
-            ];
-        }
+        //    return [
+        //        'ok' => false,
+        //        'redirect' => false,
+        //        'mensaje' => $e->getMessage()
+        //    ];
+        //}
     }
 
     private function revertirPagoAdelantado(array $pagosIds)
     {
-        try {
+        //try {
 
-            \DB::beginTransaction();
+            //\DB::beginTransaction();
 
             // 🔍 Pagos adelantados ya efectuados y no revertidos
             $pagos = PagosPrestamos::whereIn('prestamos_id', function ($q) use ($pagosIds) {
@@ -933,13 +943,22 @@ class PagarPrestamoController extends Controller
             ->orderByDesc('serie_pago') // 🔥 importante
             ->get();
 
+            $capitalPorPrestamo = $pagos->sum('capital');
+            $capitalInteresPrestamo = $pagos->sum('interes');
+            $avalesPorPrestamo  = 0;
+            $montoAnteriorSocio = null;
+            $socioPrincipal     = null;
+
+            $incrementoPrestamoAplicado = [];
+            $incrementoAvalAplicado     = [];
+
             if ($pagos->isEmpty()) {
                 return [
                     'ok' => false,
                     'mensaje' => 'No se encontraron pagos adelantados válidos para revertir.'
                 ];
             }
-
+            
             foreach ($pagos as $pago) {
 
                 // 🔎 Detalles del pago (SOCIO + AVALES)
@@ -960,6 +979,11 @@ class PagarPrestamoController extends Controller
                     | 🔙 REVERSIÓN CONTABLE
                     ====================================================== */
 
+                    // 🔹 GUARDAR MONTO ANTERIOR SOLO UNA VEZ Y SOLO PARA SOCIO
+                    if ($detalle->tipo_cliente === 'SOCIO' && $montoAnteriorSocio === null) {
+                        $montoAnteriorSocio = $socio->monto_prestamos;
+                    }
+
                     // Revertir préstamo
                     $prestamo->decrement('abona', $detalle->abona);
                     $prestamo->increment('debe', $detalle->abona);
@@ -969,11 +993,24 @@ class PagarPrestamoController extends Controller
 
                     if ($detalle->tipo_cliente === 'SOCIO') {
                         // 🔼 Regresa préstamo activo al socio
-                        $socio->increment('numero_prestamos');
+                        /*$socio->increment('numero_prestamos');
+                        $socioPrincipal     = $socio;*/
+
+                        $socioPrincipal = $socio;
+
+                        if (!isset($incrementoPrestamoAplicado[$socio->id])) {
+                            $incrementoPrestamoAplicado[$socio->id] = true;
+                        }
 
                     } elseif ($detalle->tipo_cliente === 'AVAL') {
                         // 🔼 Regresa responsabilidad como aval
-                        $socio->increment('is_aval');
+                        /*$avalesPorPrestamo += $detalle->abona;
+                        $socio->increment('is_aval');*/
+                        $avalesPorPrestamo += $detalle->abona;
+
+                        if (!isset($incrementoAvalAplicado[$socio->id])) {
+                            $incrementoAvalAplicado[$socio->id] = true;
+                        }
                     }
 
                     /* ======================================================
@@ -1009,8 +1046,13 @@ class PagarPrestamoController extends Controller
 
                 $pago->update([
                     'pagado'        => 0,
+                    'referencia'    => null,
+                    'metodo_pago'   => null,
+                    'forma_pago'    => null,
                     'fecha_pago'    => null,
                     'fecha_captura' => null,
+                    'fecha_pago'    => null,
+                    'es_adelantado' => 0,
                     'es_reversion'  => 1,
                 ]);
 
@@ -1027,30 +1069,51 @@ class PagarPrestamoController extends Controller
                 ]);
             }
 
-            \DB::commit();
+            // ACTUALIZO PRESTAMOS, SE CONSIDERA LOS INTERESES
+            $actualiza = Prestamos::lockForUpdate()->find($pagos[0]->prestamos_id);
+            $actualiza->monto_pago_reestructuracion =  null;
+            $actualiza->fecha_pago_reestructuracion =  null;
+            $actualiza->decrement('abona', $capitalInteresPrestamo);
+            $actualiza->increment('debe', $capitalInteresPrestamo);
+
+            // 🔼 Incrementar número de préstamos (una sola vez por socio)
+            foreach (array_keys($incrementoPrestamoAplicado) as $socioId) {
+                Socios::where('id', $socioId)->increment('numero_prestamos');
+            }
+
+            // 🔼 Incrementar is_aval (una sola vez por socio)
+            foreach (array_keys($incrementoAvalAplicado) as $socioId) {
+                Socios::where('id', $socioId)->increment('is_aval');
+            }
+
+            if ($socioPrincipal) {
+                // fórmula solicitada:
+                // (capital - avales) + monto anterior
+                $nuevoMontoPrestamos =
+                    ($capitalPorPrestamo - $avalesPorPrestamo) + $montoAnteriorSocio;
+
+                $socioPrincipal->update([
+                    'monto_prestamos' => $nuevoMontoPrestamos
+                ]);
+            }
+
+            //\DB::commit();
 
             return [
                 'ok' => true,
                 'mensaje' => 'Pago adelantado revertido correctamente.'
             ];
 
-        } catch (\Throwable $e) {
+        //} catch (\Throwable $e) {
 
-            \DB::rollBack();
+        //    \DB::rollBack();
 
-            return [
-                'ok' => false,
-                'mensaje' => 'Error al revertir el pago adelantado: ' . $e->getMessage()
-            ];
-        }
+        //    return [
+        //        'ok' => false,
+        //        'mensaje' => 'Error al revertir el pago adelantado: ' . $e->getMessage()
+        //    ];
+        //}
     }
-
-
-
-
-
-
-
 
     private function verificarFinPrestamo(int $prestamoId): bool
     {
@@ -1820,7 +1883,7 @@ class PagarPrestamoController extends Controller
                 $join->on('prestamos.id', '=', 'pagos_prestamos.prestamos_id')
                     ->where('pagos_prestamos.pagado', 0); // Solo pagos pendientes
             })
-            ->orderBy('prestamos.fecha_prestamo', 'asc')
+            ->orderBy('pagos_prestamos.serie_pago', 'asc')
             ->select(
                 'prestamos.id as prestamo_id',
                 'prestamos.socios_id',
@@ -1887,14 +1950,93 @@ class PagarPrestamoController extends Controller
         return view('pagar_prestamos.edit', compact('prestamo', 'socio','pagos','tipoValues'));
     }
 
-    public function update(Request $request, Prestamos $prestamos)
+    public function update(Request $request, $prestamoId)
     {
-        dd('logica update');
+        try { 
+            \DB::beginTransaction();
+
+            // 1️⃣ Obtener pagos adelantados activos
+            $pagosIds = PagosPrestamos::where('prestamos_id', $prestamoId)
+                ->where('pagado', 1)
+                ->where('es_adelantado', 1)
+                ->where('es_reversion', 0)
+                ->pluck('id')
+                ->toArray();
+
+            // 2️⃣ Revertir pagos adelantados
+            if (!empty($pagosIds)) {
+                $resultadoReversion = $this->revertirPagoAdelantado($pagosIds);
+
+                if (!$resultadoReversion['ok']) {
+                    throw new \Exception($resultadoReversion['mensaje']);
+                }
+            }
+
+            // 3️⃣ Aplicar nuevos pagos
+            $resultado = $this->procesarPagoPrestamos($request);
+
+            if (!$resultado['ok']) {
+                throw new \Exception($resultado['mensaje']);
+            }
+
+            // 4️⃣ Confirmar transacción
+            \DB::commit();
+
+            return redirect()
+                ->route('admin.pagar.prestamo.index')
+                ->with([
+                    'id' => $resultado['socio_id'],
+                    'prestamos_ids' => $resultado['prestamos_ids']
+                ]);
+        } catch (\Throwable $e) {
+
+            \DB::rollBack();
+            dd($e->getMessage());
+
+            return redirect()->back()
+                ->with('error', $e->getMessage())
+                ->withInput();
+        }
     }
 
-    public function destroy(Prestamos $prestamos)
+    public function destroy($prestamoId)
     {
-        //
+        try {
+            \DB::beginTransaction();
+
+            // 1️⃣ Pagos adelantados activos
+            $pagosIds = PagosPrestamos::where('prestamos_id', $prestamoId)
+                ->where('pagado', 1)
+                ->where('es_adelantado', 1)
+                ->where('es_reversion', 0)
+                ->pluck('id')
+                ->toArray();
+
+            // 2️⃣ Revertir adelantos
+            if (!empty($pagosIds)) {
+                $resultado = $this->revertirPagoAdelantado($pagosIds);
+
+                if (!$resultado['ok']) {
+                    throw new \Exception($resultado['mensaje']);
+                }
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'ok' => true,
+                'mensaje' => 'El pago fue cancelado correctamente.'
+            ]);
+
+        } catch (\Throwable $e) {
+
+            \DB::rollBack();
+
+            return response()->json([
+                'ok' => false,
+                'mensaje' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function reciboLiquidaPrestamo($id, Request $request)
