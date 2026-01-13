@@ -494,7 +494,7 @@ class PagarPrestamoController extends Controller
     {
         DB::beginTransaction();
         try {
-            
+
             $resultado = $this->procesarPagoPrestamos($request);
 
             if (!$resultado['ok']) {
@@ -958,7 +958,7 @@ class PagarPrestamoController extends Controller
                     'mensaje' => 'No se encontraron pagos adelantados válidos para revertir.'
                 ];
             }
-            
+
             foreach ($pagos as $pago) {
 
                 // 🔎 Detalles del pago (SOCIO + AVALES)
@@ -1883,6 +1883,7 @@ class PagarPrestamoController extends Controller
                 $join->on('prestamos.id', '=', 'pagos_prestamos.prestamos_id')
                     ->where('pagos_prestamos.pagado', 0); // Solo pagos pendientes
             })
+            ->orderBy('prestamos.id', 'asc')
             ->orderBy('pagos_prestamos.serie_pago', 'asc')
             ->select(
                 'prestamos.id as prestamo_id',
@@ -1915,6 +1916,10 @@ class PagarPrestamoController extends Controller
                 $p->numero_prestamo = "Préstamo " . ($contador - 1);
             }
         }
+
+        //foreach ($prestamo as $row) {
+        //    dump($row->toArray());
+        //}
 
         $socio = Socios::findorfail($prestamo[0]->socios_id);
 
@@ -1952,7 +1957,7 @@ class PagarPrestamoController extends Controller
 
     public function update(Request $request, $prestamoId)
     {
-        try { 
+        try {
             \DB::beginTransaction();
 
             // 1️⃣ Obtener pagos adelantados activos
