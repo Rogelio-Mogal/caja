@@ -14,35 +14,25 @@
 @section('content')
 
     @php
-        use Carbon\Carbon;
-        $today = Carbon::now();
+        $today = now();
 
-        //if ($today->day >= 15 && $today->day < $today->endOfMonth()->day) {
-        //    $desiredDate = $today->copy()->day(15); // Si hoy es mayor o igual al 15 y menor al último día del mes, muestra el día 15.
-        //} else {
-        //    $desiredDate = $today->copy()->endOfMonth(); // Si hoy es menor al 15, muestra el último día del mes anterior.
-        //}
-        // Obtener el día, mes y año de $desiredDate
-        //$day = $desiredDate->day;
-        //$month = $desiredDate->month;
-        //$year = $desiredDate->year;
-        // Obtener el nombre completo del mes en español
-        //$desiredDate = $desiredDate->locale('es'); // Establecer la configuración local en español
-        //$mesEnEspanol = $desiredDate->formatLocalized('%B');
-
-        if ($today->day > 15) {
-            //$desiredDate = $today->copy()->endOfMonth(); // Último día del mes actual
-            // Del 15 al fin de mes → día 15 del mes actual
+        if ($today->isLastOfMonth()) {
+            // Último día del mes → tomar ese mismo día
+            $desiredDate = $today->copy()->endOfMonth();
+        } elseif ($today->day >= 15) {
+            // Del 15 al penúltimo día → día 15 del mes actual
             $desiredDate = $today->copy()->day(15);
         } else {
-            //$desiredDate = $today->copy()->day(15); // Día 15 del mes actual
             // Del 1 al 14 → último día del mes anterior
             $desiredDate = $today->copy()->subMonth()->endOfMonth();
         }
-        $day = $desiredDate->day;
+
+        $day  = $desiredDate->day;
         $year = $desiredDate->year;
 
-        $mesEnEspanol = $desiredDate->locale('es')->translatedFormat('F');
+        $mesEnEspanol = $desiredDate
+            ->locale('es')
+            ->translatedFormat('F');
     @endphp
 
     <br />
