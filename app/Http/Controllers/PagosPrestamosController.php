@@ -38,7 +38,7 @@ class PagosPrestamosController extends Controller
         return view('pagos_prestamos_excel.create');
     }
 
-    private function recalcularSeriePrestamo(int $prestamoId): void
+    /*private function recalcularSeriePrestamo(int $prestamoId): void
     {
         $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $prestamoId)
             ->where('pagado', 1)
@@ -46,6 +46,46 @@ class PagosPrestamosController extends Controller
 
         Prestamos::where('id', $prestamoId)->update([
             'serie' => $ultimaSeriePagada ?? 0
+        ]);
+    }*/
+
+    private function recalcularSeriePrestamo(int $prestamoId): void
+    {
+        $prestamo = Prestamos::find($prestamoId);
+
+        if (!$prestamo) {
+            return;
+        }
+
+        // ¿existen series pendientes?
+        $primeraPendiente = PagosPrestamos::where('prestamos_id', $prestamoId)
+            ->where('pagado', 0)
+            ->min('serie_pago');
+
+        /*
+        |--------------------------------------------------
+        | CASO 1: hay pagos pendientes (nómina)
+        |--------------------------------------------------
+        */
+        if ($primeraPendiente) {
+
+            $serieActual = $primeraPendiente - 1;
+
+            Prestamos::where('id', $prestamoId)->update([
+                'serie' => max($serieActual, 0)
+            ]);
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------
+        | CASO 2: no existen pendientes
+        |--------------------------------------------------
+        | préstamo totalmente liquidado
+        */
+        Prestamos::where('id', $prestamoId)->update([
+            'serie' => $prestamo->total_quincenas
         ]);
     }
 

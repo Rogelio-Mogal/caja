@@ -149,6 +149,8 @@ class ReportesController extends Controller
                     //$fechaInicio = Carbon::parse($fechaInicio)->toDateString();
                     //$fechaFin = Carbon::parse($fechaFin)->toDateString();
                     // Subconsulta: préstamos completamente pagados y sin forma de pago
+
+                    /*
                     $prestamosValidos = DB::table('pagos_prestamos')
                         ->select('prestamos_id')
                         ->where('activo', 1)
@@ -184,6 +186,7 @@ class ReportesController extends Controller
                         ->orderBy('mes')
                         ->orderBy('quincena')
                         ->get();
+                        */
 
                         //dd($prestamosValidos, $datos);
 
@@ -211,6 +214,16 @@ class ReportesController extends Controller
                         ]);
                     }
                     */
+
+                        $datos = PagosPrestamos::with(['prestamo', 'socio'])
+                        ->where('activo', 1)
+                        ->whereBetween('fecha_pago', [$fechaInicio, $fechaFin])
+                        ->orderBy('fecha_pago')
+                        ->get();
+
+                        dd($pagos);
+
+
                 break;
 
                 case 'ingreso-efectivo':

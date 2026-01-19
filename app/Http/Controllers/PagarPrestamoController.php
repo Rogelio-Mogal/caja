@@ -862,16 +862,22 @@ class PagarPrestamoController extends Controller
                 // Eliminar IDs duplicados
                 $prestamosIds = array_unique($prestamosIds);
 
+                /*
                 foreach ($prestamosIds as $id) {
 
                     $liquidado = $this->verificarFinPrestamo($id);
 
+                    //dd($liquidado);
+
                     // 🟡 Solo si NO se liquidó, actualizar serie real
-                    if (!$liquidado) {
+                    //if (!$liquidado) {
+                    if ($liquidado) {
 
                         $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $id)
-                            ->where('pagado', 1)
+                            ->where(column: 'pagado', 1)
                             ->max('serie_pago');
+
+                            dd($ultimaSeriePagada,!is_null($ultimaSeriePagada), $ultimaSeriePagada);
 
                         if (!is_null($ultimaSeriePagada)) {
                             Prestamos::where('id', $id)->update([
@@ -880,6 +886,8 @@ class PagarPrestamoController extends Controller
                         }
                     }
                 }
+
+                */
 
                 // Actualizar próxima fecha de pago
                 $fechaComparar = now()->toDateString();
@@ -1123,22 +1131,21 @@ class PagarPrestamoController extends Controller
             return false;
         }
 
-        // 🔍 Validar que la última serie esté pagada
+        // 🔍 última serie realmente pagada
         $ultimaSeriePagada = PagosPrestamos::where('prestamos_id', $prestamoId)
-            ->where('serie_pago', $prestamo->total_quincenas)
             ->where('pagado', 1)
-            ->exists();
+            ->max('serie_pago');
 
         if (!$ultimaSeriePagada) {
             return false;
         }
 
-        // 🔒 Cierre contable
+        // 🔒 actualizar serie REAL
         $prestamo->update([
-            //'abona' => $prestamo->debia,
-            //'debe'  => 0,
-            'serie' => $prestamo->total_quincenas,
+            'serie' => $ultimaSeriePagada
         ]);
+
+        //dd($prestamo->serie);
 
         // ===============================
         // 👤 SOCIO PRINCIPAL
