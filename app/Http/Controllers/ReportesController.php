@@ -190,7 +190,6 @@ class ReportesController extends Controller
 
                         //dd($prestamosValidos, $datos);
 
-                    /*
                     $pagosFiltrados = PagosPrestamos::with(['prestamo', 'socio'])
                     ->whereBetween('fecha_tabla', [$fechaInicio, $fechaFin])
                     ->orderBy('serie_pago', 'desc')
@@ -202,8 +201,18 @@ class ReportesController extends Controller
 
                     foreach ($pagosFiltrados as $prestamoId => $pagos) {
                         $ultimoPago = $pagos->first(); // ya está ordenado por serie desc
+                        $fecha = Carbon::parse($ultimoPago->fecha_tabla);
 
                         $datos->push([
+                            'anio' => $fecha->year,
+                            'mes' => $fecha->month,
+                            'quincena' => 'QNA.',
+
+                            'total_capital' => $ultimoPago->capital,
+                            'total_interes' => $ultimoPago->interes,
+                            'total_capital_interes' => $ultimoPago->capital + $ultimoPago->interes ,
+                            'diferencia_intereses' => 0,
+
                             'prestamos_id' => $prestamoId,
                             'completo' => $ultimoPago->pagado == 1,
                             'nombre_completo' => $ultimoPago->socio->nombre_completo ?? '',
@@ -213,16 +222,11 @@ class ReportesController extends Controller
                             'fecha_tabla' => \Carbon\Carbon::parse($ultimoPago->fecha_tabla)->format('d/m/y'),
                         ]);
                     }
-                    */
-
-                        $datos = PagosPrestamos::with(['prestamo', 'socio'])
-                        ->where('activo', 1)
-                        ->whereBetween('fecha_pago', [$fechaInicio, $fechaFin])
-                        ->orderBy('fecha_pago')
-                        ->get();
-
-                        dd($pagos);
-
+                        //$datos = PagosPrestamos::with(['prestamo', 'socio'])
+                        //->where('activo', 1)
+                        //->whereBetween('fecha_pago', [$fechaInicio, $fechaFin])
+                        //->orderBy('fecha_pago')
+                        //->get();
 
                 break;
 
@@ -369,6 +373,7 @@ class ReportesController extends Controller
                     ];
                 });
             }
+
         }
 
         // define valores por defecto si no son préstamos

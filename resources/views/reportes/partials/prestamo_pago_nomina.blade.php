@@ -28,16 +28,16 @@
                                     <tbody>
                                         @foreach($datos as $nomina)
                                              <tr>
-                                                <td>{{ $nomina->anio }}</td> <!-- oculto -->
-                                                <td>{{ $nomina->mes }}</td>  <!-- oculto -->
+                                                <td>{{ $nomina['anio'] }}</td> <!-- oculto -->
+                                                <td>{{ $nomina['mes'] }}</td>  <!-- oculto -->
                                                 <td>
-                                                    {{ \Carbon\Carbon::create($nomina->anio, $nomina->mes)->translatedFormat('F Y') }}
+                                                    {{ \Carbon\Carbon::create($nomina['anio'], $nomina['mes'])->translatedFormat('F Y') }}
                                                 </td>
-                                                <td>{{ $nomina->quincena }}</td>
-                                                <td>${{ number_format($nomina->total_capital, 2) }}</td>
-                                                <td>${{ number_format($nomina->total_interes, 2) }}</td>
-                                                <td>${{ number_format($nomina->total_capital_interes, 2) }}</td>
-                                                <td>${{ number_format($nomina->diferencia_intereses, 2) }}</td>
+                                                <td>{{ $nomina['quincena'] }}</td>
+                                                <td>${{ number_format($nomina['total_capital'], 2) }}</td>
+                                                <td>${{ number_format($nomina['total_interes'], 2) }}</td>
+                                                <td>${{ number_format($nomina['total_capital_interes'], 2) }}</td>
+                                                <td>${{ number_format($nomina['diferencia_intereses'], 2) }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
